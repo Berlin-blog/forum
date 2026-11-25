@@ -1440,6 +1440,8 @@ img { max-width: 100%; }
 }
 .upload-btn:hover { border-color: var(--gold); background: rgba(214, 183, 123, 0.1); }
 .upload-btn input { display: none; }
+.upload-previews { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0; }
+.upload-previews img { width: 82px; height: 62px; object-fit: cover; border: 1px solid rgba(173, 133, 80, 0.4); box-shadow: 0 5px 14px rgba(70, 48, 24, 0.08); }
 .post-content img {
   display: block;
   max-width: 100%;

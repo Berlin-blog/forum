@@ -5,6 +5,7 @@ import { db } from '../db/client';
 import { bars, notifications, posts, reactions, threads, users } from '../db/schema';
 import { renderContent } from '../lib/content';
 import { requireUser } from '../lib/guard';
+import { resolveAttachmentMarkdown } from '../lib/attachments';
 import { awardXp } from '../lib/progression';
 
 const replySchema = z.object({
@@ -74,7 +75,8 @@ const postsRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(400).send({ error: { code: 'INVALID_INPUT', message: '回复内容不能为空' } });
     }
 
-    const { html, text } = renderContent(parsed.data.content);
+    const resolved = await resolveAttachmentMarkdown(parsed.data.content, user.id);
+    const { html, text } = renderContent(resolved);
     const created = await db.transaction(async (tx) => {
       const [thread] = await tx.select().from(threads).where(eq(threads.id, threadId)).for('update');
       if (!thread) {
@@ -170,7 +172,8 @@ const postsRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(404).send({ error: { code: 'POST_NOT_FOUND', message: '被回复的帖子不存在' } });
     }
 
-    const { html, text } = renderContent(parsed.data.content);
+    const resolved = await resolveAttachmentMarkdown(parsed.data.content, user.id);
+    const { html, text } = renderContent(resolved);
     const created = await db.transaction(async (tx) => {
       const [thread] = await tx.select().from(threads).where(eq(threads.id, parent.threadId)).for('update');
       if (!thread) throw new Error('THREAD_NOT_FOUND');

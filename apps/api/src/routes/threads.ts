@@ -6,6 +6,7 @@ import { db } from '../db/client';
 import { bars, posts, threads, users } from '../db/schema';
 import { renderContent } from '../lib/content';
 import { requireUser } from '../lib/guard';
+import { resolveAttachmentMarkdown } from '../lib/attachments';
 import { awardXp } from '../lib/progression';
 
 const createThreadSchema = z.object({
@@ -81,7 +82,8 @@ const threadsRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(404).send({ error: { code: 'BAR_NOT_FOUND', message: '吧不存在' } });
     }
 
-    const { html, text } = renderContent(parsed.data.content);
+    const resolved = await resolveAttachmentMarkdown(parsed.data.content, user.id);
+    const { html, text } = renderContent(resolved);
     const slug = `t-${randomUUID().slice(0, 8)}`;
 
     const result = await db.transaction(async (tx) => {

@@ -1,14 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import type { FastifyPluginAsync } from 'fastify';
 import sharp from 'sharp';
 import { db } from '../db/client';
 import { attachments } from '../db/schema';
 import { requireUser } from '../lib/guard';
-
-export const uploadsDir = fileURLToPath(new URL('../../../../uploads/', import.meta.url));
+import { uploadsDir } from '../lib/paths';
 
 const uploadsRoutes: FastifyPluginAsync = async (app) => {
   app.post('/api/uploads', async (request, reply) => {
@@ -56,7 +54,7 @@ const uploadsRoutes: FastifyPluginAsync = async (app) => {
     await mkdir(join(uploadsDir, folder), { recursive: true });
     await writeFile(target, image.data);
 
-    await db.insert(attachments).values([{
+    const [attachment] = await db.insert(attachments).values([{
       uploaderId: user.id,
       objectKey: key,
       mimeType: 'image/webp',
@@ -64,13 +62,15 @@ const uploadsRoutes: FastifyPluginAsync = async (app) => {
       width: image.info.width,
       height: image.info.height,
       createdAt: new Date(),
-    }]);
+    }]).$returningId();
 
     const url = `/uploads/${key}`;
-    const dataUrl = `data:image/webp;base64,${image.data.toString('base64')}`;
+    const preview = `data:image/webp;base64,${image.data.toString('base64')}`;
     return reply.code(201).send({
+      id: attachment.id,
       url,
-      markdown: `![图片](${dataUrl})`,
+      preview,
+      markdown: `![图片](attachment:${attachment.id})`,
       width: image.info.width,
       height: image.info.height,
       size: image.data.length,

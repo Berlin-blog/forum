@@ -15,6 +15,7 @@ export function ReplyForm({ endpoint, onCreated, compact, placeholder }: Props) 
   const [content, setContent] = useState('');
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [previews, setPreviews] = useState<string[]>([]);
   const [error, setError] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -33,8 +34,9 @@ export function ReplyForm({ endpoint, onCreated, compact, placeholder }: Props) 
     try {
       const form = new FormData();
       form.append('file', file);
-      const data = await api.upload<{ markdown: string }>('/api/uploads', form);
+      const data = await api.upload<{ markdown: string; preview: string }>('/api/uploads', form);
       setContent((current) => `${current}${current ? '\n\n' : ''}${data.markdown}\n`);
+      setPreviews((current) => [...current, data.preview]);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : '图片上传失败');
     } finally {
@@ -51,6 +53,7 @@ export function ReplyForm({ endpoint, onCreated, compact, placeholder }: Props) 
     try {
       await api.post(endpoint, { content });
       setContent('');
+      setPreviews([]);
       await onCreated();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : '回复失败');
@@ -67,6 +70,13 @@ export function ReplyForm({ endpoint, onCreated, compact, placeholder }: Props) 
         placeholder={placeholder ?? '写下你的回复，支持 Markdown 与图片'}
         rows={compact ? 3 : 5}
       />
+      {previews.length > 0 && (
+        <div className="upload-previews">
+          {previews.map((preview, index) => (
+            <img src={preview} alt={`待发送图片 ${index + 1}`} key={`${index}-${preview.slice(-12)}`} />
+          ))}
+        </div>
+      )}
       {error && <p className="form-error">{error}</p>}
       <div className="reply-actions">
         <label className="upload-btn">

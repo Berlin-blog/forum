@@ -17,8 +17,9 @@ import notificationsRoutes from './routes/notifications';
 import postsRoutes from './routes/posts';
 import searchRoutes from './routes/search';
 import threadsRoutes from './routes/threads';
-import uploadsRoutes, { uploadsDir } from './routes/uploads';
+import uploadsRoutes from './routes/uploads';
 import usersRoutes from './routes/users';
+import { uploadsDir } from './lib/paths';
 
 const app = Fastify({
   logger: true,
