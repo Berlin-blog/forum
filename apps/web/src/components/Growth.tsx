@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../auth';
 import { usePreferences } from '../preferences';
@@ -83,7 +83,6 @@ export function CheckInButton() {
 export function NotificationBell() {
   const { user } = useAuth();
   const { preferences } = usePreferences();
-  const location = useLocation();
   const [count, setCount] = useState(0);
 
   useEffect(() => {
@@ -102,16 +101,25 @@ export function NotificationBell() {
       setCount(0);
     }
 
+    function updated(event: Event) {
+      const delta = (event as CustomEvent<{ delta?: number }>).detail?.delta;
+      if (typeof delta === 'number') {
+        setCount((current) => Math.max(0, current + delta));
+      } else {
+        load();
+      }
+    }
+
     load();
     const timer = preferences.notificationPolling ? window.setInterval(load, 25_000) : null;
     window.addEventListener('notifications-read', clear);
-    window.addEventListener('notifications-updated', load);
+    window.addEventListener('notifications-updated', updated);
     return () => {
       if (timer !== null) window.clearInterval(timer);
       window.removeEventListener('notifications-read', clear);
-      window.removeEventListener('notifications-updated', load);
+      window.removeEventListener('notifications-updated', updated);
     };
-  }, [user, location.pathname, preferences.notificationPolling]);
+  }, [user, preferences.notificationPolling]);
 
   if (!user) return null;
 

@@ -54,6 +54,7 @@ export function NotificationsPage() {
     setItems((current) => current.map((row) => (
       row.id === item.id ? { ...row, readAt: new Date().toISOString() } : row
     )));
+    window.dispatchEvent(new CustomEvent('notifications-updated', { detail: { delta: -1 } }));
     try {
       await api.post(`/api/notifications/${item.id}/read`, {});
       window.dispatchEvent(new Event('notifications-updated'));
