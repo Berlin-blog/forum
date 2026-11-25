@@ -16,10 +16,11 @@
 
 | 用途 | 地址 |
 |---|---|
+| 公网前端 | <https://berlin-blog.github.io/forum/> |
+| GitHub 仓库 | <https://github.com/Berlin-blog/forum> |
 | 本地前端 | <http://127.0.0.1:5173/> |
 | 本地 API | <http://127.0.0.1:3002/api/health> |
 | 公网 API | <https://promotion-surpass-jazz.ngrok-free.dev/api/health> |
-| GitHub Pages | 推送到 GitHub 后，在仓库 Settings → Pages 选择 GitHub Actions |
 
 > 公网 API 是 ngrok 免费隧道；浏览器直接打开可能先看到 ngrok 警告页。前端请求会带 `ngrok-skip-browser-warning: 1` 绕过。
 
@@ -185,20 +186,19 @@ Authorization: Bearer <token>
 
 ## GitHub Pages
 
-仓库已包含：
+已上线：<https://berlin-blog.github.io/forum/>
 
-- [.github/workflows/deploy-web.yml](.github/workflows/deploy-web.yml)
+仓库包含：
+
+- [.github/workflows/deploy-web.yml](.github/workflows/deploy-web.yml)（build + deploy 两个 job）
 - [.github/workflows/api-ci.yml](.github/workflows/api-ci.yml)
 
-推送到 GitHub 后：
+更新流程：
 
-1. 仓库 Settings → Pages → Source 选择 **GitHub Actions**
-2. push `main`
-3. 访问 `https://<username>.github.io/<repo>/`
-4. 把 `apps/web/public/config.js` 的 `apiBase` 改成你的 ngrok dev domain
-5. 如果仓库名是 `<username>.github.io`，把 workflow 里的 `VITE_BASE` 从 `/<repo>/` 改成 `/`
-
-> 免费 GitHub Pages 需要公开仓库。API 和 MySQL 仍然跑在当前电脑。
+1. push `main`
+2. GitHub Actions 构建 `apps/web`
+3. 自动部署到 Pages
+4. API 和 MySQL 仍然跑在当前电脑
 
 ---
 
