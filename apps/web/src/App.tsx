@@ -13,6 +13,7 @@ import { NotFoundPage } from './pages/NotFoundPage';
 import { NotificationsPage } from './pages/NotificationsPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { SearchPage } from './pages/SearchPage';
+import { SettingsPage } from './pages/SettingsPage';
 import { ThreadPage } from './pages/ThreadPage';
 import { TitlesPage } from './pages/TitlesPage';
 import { ProfilePage } from './pages/UserPage';
@@ -36,6 +37,7 @@ export function App() {
           <Route path="/t/:id" element={<ThreadPage />} />
           <Route path="/u/:username" element={<ProfilePage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="*" element={<NotFoundPage />} />

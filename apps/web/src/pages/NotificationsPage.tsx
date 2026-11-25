@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../auth';
+import { usePreferences } from '../preferences';
 import { formatTime } from '../format';
 import type { NotificationItem } from '../types';
 
@@ -22,6 +23,7 @@ function notificationText(item: NotificationItem) {
 
 export function NotificationsPage() {
   const { user, loading: authLoading } = useAuth();
+  const { preferences } = usePreferences();
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
@@ -38,13 +40,27 @@ export function NotificationsPage() {
       return;
     }
     load().catch(() => setLoading(false));
+    if (!preferences.notificationPolling) return;
     const timer = window.setInterval(() => {
       if (document.visibilityState === 'visible') {
         load().catch(() => undefined);
       }
     }, 30_000);
     return () => window.clearInterval(timer);
-  }, [user]);
+  }, [user, preferences.notificationPolling]);
+
+  async function markRead(item: NotificationItem) {
+    if (item.readAt) return;
+    setItems((current) => current.map((row) => (
+      row.id === item.id ? { ...row, readAt: new Date().toISOString() } : row
+    )));
+    try {
+      await api.post(`/api/notifications/${item.id}/read`, {});
+      window.dispatchEvent(new Event('notifications-updated'));
+    } catch {
+      // Keep the optimistic state; the next poll will reconcile.
+    }
+  }
 
   async function markAllRead() {
     await api.post('/api/notifications/read', {});
@@ -82,7 +98,11 @@ export function NotificationsPage() {
       ) : (
         <div className="notification-list" data-reveal>
           {items.map((item) => (
-            <div className={`notification-row ${item.readAt ? '' : 'unread'}`} key={item.id}>
+            <div
+              className={`notification-row ${item.readAt ? '' : 'unread'}`}
+              key={item.id}
+              onClick={() => void markRead(item)}
+            >
               <span className="notification-seal">{item.type === 'system' ? '级' : '复'}</span>
               <div className="notification-main">
                 <p>

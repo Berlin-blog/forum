@@ -35,6 +35,7 @@ export function Layout() {
             <NavLink to="/" end>首页</NavLink>
             <NavLink to="/bars">吧广场</NavLink>
             <NavLink to="/search">搜索</NavLink>
+            <NavLink to="/settings">设置</NavLink>
           </nav>
 
           <div className="topbar-user">

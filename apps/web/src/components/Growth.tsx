@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../auth';
+import { usePreferences } from '../preferences';
 import type { Progress } from '../types';
 
 export function LevelBadge({ level, compact }: { level: number; compact?: boolean }) {
@@ -81,6 +82,7 @@ export function CheckInButton() {
 
 export function NotificationBell() {
   const { user } = useAuth();
+  const { preferences } = usePreferences();
   const location = useLocation();
   const [count, setCount] = useState(0);
 
@@ -101,13 +103,15 @@ export function NotificationBell() {
     }
 
     load();
-    const timer = window.setInterval(load, 25_000);
+    const timer = preferences.notificationPolling ? window.setInterval(load, 25_000) : null;
     window.addEventListener('notifications-read', clear);
+    window.addEventListener('notifications-updated', load);
     return () => {
-      window.clearInterval(timer);
+      if (timer !== null) window.clearInterval(timer);
       window.removeEventListener('notifications-read', clear);
+      window.removeEventListener('notifications-updated', load);
     };
-  }, [user, location.pathname]);
+  }, [user, location.pathname, preferences.notificationPolling]);
 
   if (!user) return null;
 

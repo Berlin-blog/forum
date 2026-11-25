@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api, ApiError, fixContentHtml } from '../api';
 import { useAuth } from '../auth';
+import { usePreferences } from '../preferences';
 import { formatTime } from '../format';
 import type { Post } from '../types';
 import { ReplyForm } from './ReplyForm';
@@ -13,6 +14,7 @@ type Props = {
 
 export function PostNode({ post, depth, onChanged }: Props) {
   const { user } = useAuth();
+  const { preferences } = usePreferences();
   const [children, setChildren] = useState<Post[] | null>(null);
   const [childTotal, setChildTotal] = useState(post.childCount);
   const [open, setOpen] = useState(false);
@@ -25,6 +27,7 @@ export function PostNode({ post, depth, onChanged }: Props) {
   const [saving, setSaving] = useState(false);
   const [deleted, setDeleted] = useState(false);
   const [error, setError] = useState('');
+  const autoLoaded = useRef(false);
 
   const count = childTotal;
   const canEdit = user && (user.id === post.authorId || user.userRole === 'admin');
@@ -62,6 +65,13 @@ export function PostNode({ post, depth, onChanged }: Props) {
     }
     await loadChildren();
   }
+
+  useEffect(() => {
+    if (!preferences.autoExpandReplies || post.childCount === 0 || autoLoaded.current) return;
+    autoLoaded.current = true;
+    void loadChildren();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [preferences.autoExpandReplies, post.childCount]);
 
   async function handleCreated() {
     setChildren(null);

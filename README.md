@@ -158,6 +158,7 @@ forum/
 - **成就**：16 个成就，独立成就墙
 - **等级榜**：按等级与经验排序
 - **每日任务**：签到、发帖、回复、收到回复四个进度
+- **设置页**：楼中楼自动展开、夜间模式、减少动效、通知轮询开关
 - **吧主后台**：吧规、小吧主、成员管理
 - 管理员事后处理接口（举报、封禁、隐藏主题 / 帖子）
 - Markdown 渲染 + HTML 清洗
@@ -250,6 +251,7 @@ forum/
 | `GET` | `/api/notifications` | 通知列表 |
 | `GET` | `/api/notifications/unread-count` | 未读数 |
 | `POST` | `/api/notifications/read` | 全部已读 |
+| `POST` | `/api/notifications/:id/read` | 单条已读 |
 | `GET` | `/api/me/daily-tasks` | 每日任务 |
 | `GET` | `/api/leaderboard` | 等级榜 |
 | `GET` | `/api/achievements` | 成就墙（含解锁状态） |
