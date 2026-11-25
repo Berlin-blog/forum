@@ -1,6 +1,10 @@
-const apiBase = (
+export const apiBase = (
   window.__FORUM_CONFIG__?.apiBase ?? 'http://127.0.0.1:3002'
 ).replace(/\/+$/, '');
+
+export function fixContentHtml(html: string) {
+  return html.replace(/(src|href)="\/uploads\//g, `$1="${apiBase}/uploads/`);
+}
 
 const TOKEN_KEY = 'forum_token';
 
@@ -62,5 +66,8 @@ export const api = {
       method: 'PATCH',
       body: body === undefined ? undefined : JSON.stringify(body),
     });
+  },
+  upload<T>(path: string, form: FormData) {
+    return request<T>(path, { method: 'POST', body: form });
   },
 };

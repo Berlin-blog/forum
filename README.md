@@ -19,6 +19,12 @@
 
 ![通知](docs/screenshots/notifications.png)
 
+![搜索](docs/screenshots/search.png)
+
+![成就墙](docs/screenshots/achievements.png)
+
+![等级榜](docs/screenshots/leaderboard.png)
+
 ---
 
 ## 当前地址
@@ -63,6 +69,12 @@ pnpm install
 
 ```powershell
 pnpm --filter api db:migrate
+```
+
+已有用户升级后，可补一次称号 / 成就同步：
+
+```powershell
+pnpm --filter api db:sync-growth
 ```
 
 ### 4. 启动 API
@@ -128,20 +140,30 @@ forum/
 - **用户创建吧**：创建者自动成为吧主
 - 关注 / 取消关注吧
 - 发主题、主题列表、主题详情
+- **图文发帖 / 图片回复**：图片压缩为 WebP，8MB 内
 - 顶层回复
 - **无限层楼中楼**：`parent_id` 自关联，前端逐层展开
 - 点赞帖子
+- **搜索**：吧 / 主题 / 用户，支持标题与首楼正文
 - **个人主页**：等级、称号、粉丝/关注、关注的吧、主题、回复、成就
-- **关注用户 / 粉丝**
+- **关注用户 / 粉丝**：粉丝 / 关注列表弹层
 - **通知中心**：被回复、升级、被关注
 - **1–20 级经验系统**：发帖、回复、被回复、签到获取经验，每日上限
 - **签到**：每日一次
-- **称号**：按等级解锁，可佩戴 / 卸下
-- **成就**：主题数、回复数、粉丝数、等级、签到、获赞等条件自动解锁
+- **称号**：14 个等级称号，可佩戴 / 卸下
+- **成就**：16 个成就，独立成就墙
+- **等级榜**：按等级与经验排序
+- **每日任务**：签到、发帖、回复、收到回复四个进度
 - 管理员事后处理接口（举报、封禁、隐藏主题 / 帖子）
 - Markdown 渲染 + HTML 清洗
-- 中文 FULLTEXT ngram 搜索索引（API 搜索接口待接）
 - GitHub Pages 部署 workflow
+
+## 首页与性能
+
+- 首页改为杂志式编辑布局：精选、正在发生、游园、等级榜、今日课业、签到
+- 首页只请求一个聚合接口 `/api/home`，不再串行请求吧列表 + 主题 + 任务
+- 减少粒子数量、移除 reveal 的模糊滤镜、移动端关闭金尘并启用 `content-visibility`
+- 图片上传后压缩为 WebP 并内嵌到内容，避免 ngrok 免费版插页挡住图片；原文件同时保存在 `uploads/`
 
 ## 成长系统
 
@@ -169,12 +191,12 @@ forum/
 
 ## 未实现
 
-- 图片上传
 - 举报 / 审核后台 UI
-- 搜索页面
+- 吧主后台 UI
 - 邮箱 / 找回密码
 - 完整管理后台页面
-- 粉丝 / 关注列表弹层
+- 图片内容审核
+- 会员 / 广告 / 支付
 
 ---
 
@@ -183,6 +205,9 @@ forum/
 | 方法 | 路径 | 说明 |
 |---|---|---|
 | `GET` | `/api/health` | 健康检查 |
+| `GET` | `/api/home` | 首页聚合（吧、精选、最新、榜单、任务） |
+| `GET` | `/api/search?q=&type=` | 搜索吧 / 主题 / 用户 |
+| `POST` | `/api/uploads` | 上传图片（8MB 内） |
 | `POST` | `/api/auth/register` | 注册 |
 | `POST` | `/api/auth/login` | 登录 |
 | `POST` | `/api/auth/logout` | 退出 |
@@ -208,6 +233,9 @@ forum/
 | `GET` | `/api/notifications` | 通知列表 |
 | `GET` | `/api/notifications/unread-count` | 未读数 |
 | `POST` | `/api/notifications/read` | 全部已读 |
+| `GET` | `/api/me/daily-tasks` | 每日任务 |
+| `GET` | `/api/leaderboard` | 等级榜 |
+| `GET` | `/api/achievements` | 成就墙（含解锁状态） |
 | `POST` | `/api/reports` | 提交举报 |
 | `GET` | `/api/admin/reports` | 管理员：举报列表 |
 | `POST` | `/api/admin/reports/:id/resolve` | 管理员：处理举报 |
@@ -215,6 +243,8 @@ forum/
 | `POST` | `/api/admin/threads/:id/hide` | 管理员：隐藏 / 恢复主题 |
 | `POST` | `/api/admin/posts/:id/hide` | 管理员：隐藏 / 恢复帖子 |
 | `GET` | `/api/users/:username` | 用户主页（统计 / 关注吧 / 主题 / 回复 / 称号 / 成就） |
+| `GET` | `/api/users/:username/followers` | 粉丝列表 |
+| `GET` | `/api/users/:username/following` | 关注列表 |
 | `POST` | `/api/users/:username/follow` | 关注 / 取消关注用户 |
 
 认证：
@@ -232,7 +262,7 @@ Authorization: Bearer <token>
 - `posts.parent_id` 自关联，无 `depth` 限制
 - 顶层楼层 `floor` 唯一；楼中楼 `floor = NULL`
 - `threads` / `posts` 有 FULLTEXT ngram 索引
-- 迁移文件：[0001_init.sql](apps/api/migrations/0001_init.sql)、[0002_social_growth.sql](apps/api/migrations/0002_social_growth.sql)
+- 迁移文件：[0001_init.sql](apps/api/migrations/0001_init.sql)、[0002_social_growth.sql](apps/api/migrations/0002_social_growth.sql)、[0003_more_growth.sql](apps/api/migrations/0003_more_growth.sql)、[0004_attachments.sql](apps/api/migrations/0004_attachments.sql)
 
 ---
 

@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../auth';
 import { CheckInButton, LevelBadge } from '../components/Growth';
+import { FollowListModal } from '../components/FollowListModal';
 import { formatTime } from '../format';
 import type { UserProfile } from '../types';
 
@@ -17,6 +18,7 @@ export function ProfilePage() {
   const [bio, setBio] = useState('');
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
+  const [followMode, setFollowMode] = useState<'followers' | 'following' | null>(null);
 
   async function load() {
     const data = await api.get<UserProfile>(`/api/users/${encodeURIComponent(username)}`);
@@ -109,8 +111,8 @@ export function ProfilePage() {
           <p className="muted">@{profileUser.username} · {profileUser.userRole === 'admin' ? '管理员' : '成员'}</p>
           <p className="profile-bio">{profileUser.bio || '这个人很懒，还没有写简介。'}</p>
           <div className="profile-stats">
-            <span><strong>{stats.followers}</strong> 粉丝</span>
-            <span><strong>{stats.following}</strong> 关注</span>
+            <button className="stat-button" onClick={() => setFollowMode('followers')}><strong>{stats.followers}</strong> 粉丝</button>
+            <button className="stat-button" onClick={() => setFollowMode('following')}><strong>{stats.following}</strong> 关注</button>
             <span><strong>{stats.threads}</strong> 主题</span>
             <span><strong>{stats.posts}</strong> 帖子</span>
             <span><strong>{stats.checkins}</strong> 签到</span>
@@ -269,6 +271,7 @@ export function ProfilePage() {
                 <span className="section-index">成</span>
                 <h2>成就</h2>
               </div>
+              <Link className="section-link" to="/achievements">全部 <span>→</span></Link>
             </div>
             {profile.achievements.length === 0 ? (
               <p className="muted">还没有解锁成就。</p>
@@ -286,6 +289,14 @@ export function ProfilePage() {
           </section>
         </aside>
       </div>
+
+      {followMode && (
+        <FollowListModal
+          username={profileUser.username}
+          mode={followMode}
+          onClose={() => setFollowMode(null)}
+        />
+      )}
     </div>
   );
 }

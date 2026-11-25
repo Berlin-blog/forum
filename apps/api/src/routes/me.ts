@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { db } from '../db/client';
 import { checkins, titles, userTitles, users } from '../db/schema';
 import { requireUser } from '../lib/guard';
-import { awardXp, checkinToday, progressForExp } from '../lib/progression';
+import { awardXp, checkinToday, getDailyTasks, progressForExp } from '../lib/progression';
 
 const meRoutes: FastifyPluginAsync = async (app) => {
   app.post('/api/checkin', async (request, reply) => {
@@ -42,6 +42,12 @@ const meRoutes: FastifyPluginAsync = async (app) => {
       checkedIn: Boolean(row),
       progress: progressForExp(me?.exp ?? 0),
     };
+  });
+
+  app.get('/api/me/daily-tasks', async (request, reply) => {
+    const user = await requireUser(request, reply);
+    if (!user) return;
+    return { tasks: await getDailyTasks(user.id) };
   });
 
   app.get('/api/me/titles', async (request, reply) => {

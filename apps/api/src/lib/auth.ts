@@ -10,6 +10,9 @@ export type AuthUser = {
   displayName: string;
   userRole: string;
   status: string;
+  level: number;
+  exp: number;
+  equippedTitleId: number | null;
 };
 
 function hashToken(token: string) {
@@ -45,6 +48,9 @@ export async function getSessionUser(token: string): Promise<AuthUser | null> {
       displayName: users.displayName,
       userRole: users.userRole,
       status: users.status,
+      level: users.level,
+      exp: users.exp,
+      equippedTitleId: users.equippedTitleId,
     })
     .from(sessions)
     .innerJoin(users, eq(users.id, sessions.userId))

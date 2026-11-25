@@ -2,6 +2,7 @@ import { and, eq, gte, inArray, isNotNull, sql } from 'drizzle-orm';
 import { db } from '../db/client';
 import {
   achievements,
+  bars,
   checkins,
   notifications,
   posts,
@@ -74,6 +75,10 @@ async function insertIgnoreTitles(tx: Tx, userId: number, level: number) {
   await tx.execute(sql.raw(`INSERT IGNORE INTO user_titles (user_id, title_id, acquired_at) VALUES ${values.join(', ')}`));
 }
 
+export async function syncTitles(tx: Tx, userId: number, level: number) {
+  await insertIgnoreTitles(tx, userId, level);
+}
+
 async function insertIgnoreAchievements(tx: Tx, userId: number, unlocked: number[]) {
   if (!unlocked.length) return;
   const now = new Date();
@@ -85,7 +90,7 @@ async function insertIgnoreAchievements(tx: Tx, userId: number, unlocked: number
 export async function syncAchievements(tx: Tx, userId: number, level: number) {
   const userPostIds = tx.select({ id: posts.id }).from(posts).where(eq(posts.authorId, userId));
 
-  const [[threadCount], [replyCount], [followerCount], [checkinCount], [likeCount]] = await Promise.all([
+  const [[threadCount], [replyCount], [followerCount], [checkinCount], [likeCount], [barCount], [barMemberCount]] = await Promise.all([
     tx.select({ value: sql<number>`count(*)` }).from(threads).where(eq(threads.authorId, userId)),
     tx.select({ value: sql<number>`count(*)` }).from(posts).where(and(eq(posts.authorId, userId), isNotNull(posts.parentId))),
     tx.select({ value: sql<number>`count(*)` }).from(userFollows).where(eq(userFollows.followeeId, userId)),
@@ -94,6 +99,8 @@ export async function syncAchievements(tx: Tx, userId: number, level: number) {
       eq(reactions.targetType, 'post'),
       inArray(reactions.targetId, userPostIds),
     )),
+    tx.select({ value: sql<number>`count(*)` }).from(bars).where(eq(bars.createdBy, userId)),
+    tx.select({ value: sql<number>`coalesce(sum(${bars.memberCount}), 0)` }).from(bars).where(eq(bars.createdBy, userId)),
   ]);
 
   const metrics: Record<string, number> = {
@@ -103,6 +110,8 @@ export async function syncAchievements(tx: Tx, userId: number, level: number) {
     checkins: Number(checkinCount?.value ?? 0),
     level,
     likes_received: Number(likeCount?.value ?? 0),
+    bars_created: Number(barCount?.value ?? 0),
+    bar_members: Number(barMemberCount?.value ?? 0),
   };
 
   const all = await tx.select({ id: achievements.id, conditionType: achievements.conditionType, threshold: achievements.threshold })
@@ -149,7 +158,6 @@ export async function awardXp(tx: Tx, userId: number, source: XpSource) {
   await tx.update(users).set({ exp: newExp, level: newLevel }).where(eq(users.id, userId));
   await insertIgnoreTitles(tx, userId, newLevel);
   await syncAchievements(tx, userId, newLevel);
-
   if (newLevel > oldLevel) {
     await tx.insert(notifications).values([{
       userId,
@@ -191,4 +199,70 @@ export async function checkinToday(tx: Tx, userId: number) {
   }]);
 
   return true;
+}
+
+export async function getDailyTasks(userId: number) {
+  const start = startOfUtcDay();
+  const day = new Date().toISOString().slice(0, 10);
+
+  const [threadsToday] = await db
+    .select({ value: sql<number>`count(*)` })
+    .from(xpEvents)
+    .where(and(eq(xpEvents.userId, userId), eq(xpEvents.source, 'thread'), gte(xpEvents.createdAt, start)));
+
+  const [repliesToday] = await db
+    .select({ value: sql<number>`count(*)` })
+    .from(xpEvents)
+    .where(and(eq(xpEvents.userId, userId), eq(xpEvents.source, 'reply'), gte(xpEvents.createdAt, start)));
+
+  const [receivedToday] = await db
+    .select({ value: sql<number>`count(*)` })
+    .from(xpEvents)
+    .where(and(eq(xpEvents.userId, userId), eq(xpEvents.source, 'received_reply'), gte(xpEvents.createdAt, start)));
+
+  const [checkinTodayRow] = await db
+    .select({ value: sql<number>`count(*)` })
+    .from(checkins)
+    .where(and(eq(checkins.userId, userId), eq(checkins.checkinDate, day)));
+
+  const tasks = [
+    {
+      key: 'checkin',
+      label: '入席签到',
+      description: '每日签到一次',
+      progress: Number(checkinTodayRow?.value ?? 0),
+      target: 1,
+      reward: '+5 经验',
+    },
+    {
+      key: 'thread',
+      label: '开一帖',
+      description: '发布 1 个主题',
+      progress: Number(threadsToday?.value ?? 0),
+      target: 1,
+      reward: '+5 经验',
+    },
+    {
+      key: 'reply',
+      label: '清谈三句',
+      description: '发布 3 条回复',
+      progress: Number(repliesToday?.value ?? 0),
+      target: 3,
+      reward: '+9 经验',
+    },
+    {
+      key: 'received',
+      label: '有人回应',
+      description: '收到 1 条回复',
+      progress: Number(receivedToday?.value ?? 0),
+      target: 1,
+      reward: '+2 经验',
+    },
+  ];
+
+  return tasks.map((task) => ({
+    ...task,
+    progress: Math.min(task.progress, task.target),
+    done: task.progress >= task.target,
+  }));
 }

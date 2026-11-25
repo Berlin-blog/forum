@@ -162,6 +162,58 @@ const usersRoutes: FastifyPluginAsync = async (app) => {
     };
   });
 
+  app.get('/api/users/:username/followers', async (request, reply) => {
+    const { username } = request.params as { username: string };
+    const [target] = await db.select({ id: users.id }).from(users).where(eq(users.username, username)).limit(1);
+    if (!target) return reply.code(404).send({ error: { code: 'USER_NOT_FOUND', message: '用户不存在' } });
+
+    const rows = await db
+      .select({
+        id: users.id,
+        username: users.username,
+        displayName: users.displayName,
+        avatarUrl: users.avatarUrl,
+        level: users.level,
+        titleName: titles.name,
+        titleIcon: titles.icon,
+        followedAt: userFollows.createdAt,
+      })
+      .from(userFollows)
+      .innerJoin(users, eq(users.id, userFollows.followerId))
+      .leftJoin(titles, eq(titles.id, users.equippedTitleId))
+      .where(eq(userFollows.followeeId, target.id))
+      .orderBy(desc(userFollows.createdAt))
+      .limit(50);
+
+    return { items: rows };
+  });
+
+  app.get('/api/users/:username/following', async (request, reply) => {
+    const { username } = request.params as { username: string };
+    const [target] = await db.select({ id: users.id }).from(users).where(eq(users.username, username)).limit(1);
+    if (!target) return reply.code(404).send({ error: { code: 'USER_NOT_FOUND', message: '用户不存在' } });
+
+    const rows = await db
+      .select({
+        id: users.id,
+        username: users.username,
+        displayName: users.displayName,
+        avatarUrl: users.avatarUrl,
+        level: users.level,
+        titleName: titles.name,
+        titleIcon: titles.icon,
+        followedAt: userFollows.createdAt,
+      })
+      .from(userFollows)
+      .innerJoin(users, eq(users.id, userFollows.followeeId))
+      .leftJoin(titles, eq(titles.id, users.equippedTitleId))
+      .where(eq(userFollows.followerId, target.id))
+      .orderBy(desc(userFollows.createdAt))
+      .limit(50);
+
+    return { items: rows };
+  });
+
   app.post('/api/users/:username/follow', async (request, reply) => {
     const viewer = await requireUser(request, reply);
     if (!viewer) return;

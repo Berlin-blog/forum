@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api, ApiError } from '../api';
 import { useAuth } from '../auth';
@@ -13,7 +13,9 @@ export function NewThreadPage() {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
+  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (slug) setBarSlug(slug);
@@ -45,6 +47,23 @@ export function NewThreadPage() {
         </div>
       </div>
     );
+  }
+
+  async function uploadImage(file: File) {
+    if (uploading) return;
+    setUploading(true);
+    setError('');
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      const data = await api.upload<{ markdown: string }>('/api/uploads', form);
+      setContent((current) => `${current}${current ? '\n\n' : ''}${data.markdown}\n`);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : '图片上传失败');
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
   }
 
   async function submit(event: React.FormEvent) {
@@ -116,8 +135,20 @@ export function NewThreadPage() {
         {error && <p className="form-error">{error}</p>}
 
         <div className="form-actions">
-          <span className="muted small">无审核 · 无发帖数量限制</span>
-          <button className="btn primary" disabled={busy || !title.trim() || !content.trim()}>
+          <label className="upload-btn">
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) void uploadImage(file);
+              }}
+            />
+            {uploading ? '上传中…' : '插入图片'}
+          </label>
+          <span className="muted small">支持 Markdown · 图片 8MB 内</span>
+          <button className="btn primary" disabled={busy || uploading || !title.trim() || !content.trim()}>
             {busy ? '发布中…' : '发布主题'}
           </button>
         </div>

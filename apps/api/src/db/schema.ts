@@ -266,6 +266,21 @@ export const userAchievements = mysqlTable('user_achievements', {
   uniqueIndex('uk_user_achievements').on(table.userId, table.achievementId),
 ]);
 
+export const attachments = mysqlTable('attachments', {
+  id: bigint('id', { mode: 'number', unsigned: true }).autoincrement().primaryKey(),
+  uploaderId: bigint('uploader_id', { mode: 'number', unsigned: true }).notNull(),
+  postId: bigint('post_id', { mode: 'number', unsigned: true }),
+  objectKey: varchar('object_key', { length: 255 }).notNull(),
+  mimeType: varchar('mime_type', { length: 64 }).notNull(),
+  sizeBytes: bigint('size_bytes', { mode: 'number', unsigned: true }).notNull(),
+  width: int('width', { unsigned: true }),
+  height: int('height', { unsigned: true }),
+  createdAt: datetime('created_at', { mode: 'date', fsp: 3 }).notNull(),
+}, (table) => [
+  uniqueIndex('uk_attachments_object_key').on(table.objectKey),
+  index('idx_attachments_post').on(table.postId),
+]);
+
 export type User = typeof users.$inferSelect;
 export type Bar = typeof bars.$inferSelect;
 export type Thread = typeof threads.$inferSelect;

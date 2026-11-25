@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, ApiError } from '../api';
 import { useAuth } from '../auth';
@@ -14,7 +14,9 @@ export function ReplyForm({ endpoint, onCreated, compact, placeholder }: Props) 
   const { user } = useAuth();
   const [content, setContent] = useState('');
   const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
+  const fileRef = useRef<HTMLInputElement>(null);
 
   if (!user) {
     return (
@@ -22,6 +24,23 @@ export function ReplyForm({ endpoint, onCreated, compact, placeholder }: Props) 
         <Link to="/login">登录</Link> 后回复
       </p>
     );
+  }
+
+  async function uploadImage(file: File) {
+    if (uploading) return;
+    setUploading(true);
+    setError('');
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      const data = await api.upload<{ markdown: string }>('/api/uploads', form);
+      setContent((current) => `${current}${current ? '\n\n' : ''}${data.markdown}\n`);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : '图片上传失败');
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
   }
 
   async function submit(event: React.FormEvent) {
@@ -45,13 +64,25 @@ export function ReplyForm({ endpoint, onCreated, compact, placeholder }: Props) 
       <textarea
         value={content}
         onChange={(event) => setContent(event.target.value)}
-        placeholder={placeholder ?? '写下你的回复，支持 Markdown'}
+        placeholder={placeholder ?? '写下你的回复，支持 Markdown 与图片'}
         rows={compact ? 3 : 5}
       />
       {error && <p className="form-error">{error}</p>}
       <div className="reply-actions">
-        <span className="muted small">支持 Markdown · 提交后立即展示</span>
-        <button className="btn primary sm" disabled={busy || !content.trim()}>
+        <label className="upload-btn">
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) void uploadImage(file);
+            }}
+          />
+          {uploading ? '上传中…' : '插入图片'}
+        </label>
+        <span className="muted small">支持 Markdown · 图片 8MB 内</span>
+        <button className="btn primary sm" disabled={busy || uploading || !content.trim()}>
           {busy ? '提交中…' : '回复'}
         </button>
       </div>

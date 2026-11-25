@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { api } from '../api';
+import { api, fixContentHtml } from '../api';
 import { formatTime } from '../format';
 import type { Post } from '../types';
 import { ReplyForm } from './ReplyForm';
@@ -58,7 +58,7 @@ export function PostNode({ post, depth, onChanged }: Props) {
         <time className="muted small">{formatTime(post.createdAt)}</time>
       </div>
 
-      <div className="post-content" dangerouslySetInnerHTML={{ __html: post.contentHtml }} />
+      <div className="post-content" dangerouslySetInnerHTML={{ __html: fixContentHtml(post.contentHtml) }} />
 
       <div className="post-actions">
         {count > 0 && (

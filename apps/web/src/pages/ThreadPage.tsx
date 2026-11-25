@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { api } from '../api';
+import { api, fixContentHtml } from '../api';
 import { ReplyForm } from '../components/ReplyForm';
 import { PostNode } from '../components/PostNode';
 import { formatTime } from '../format';
@@ -69,7 +69,7 @@ export function ThreadPage() {
             <span className="post-author">{thread.authorName}</span>
             <span className="muted small">楼主</span>
           </div>
-          <div className="post-content" dangerouslySetInnerHTML={{ __html: firstPost.contentHtml }} />
+          <div className="post-content" dangerouslySetInnerHTML={{ __html: fixContentHtml(firstPost.contentHtml) }} />
         </article>
       )}
 

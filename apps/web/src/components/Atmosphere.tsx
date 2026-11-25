@@ -21,7 +21,7 @@ export function ScrollProgress() {
 }
 
 export function Atmosphere() {
-  const particles = Array.from({ length: 22 }, (_, index) => ({
+  const particles = Array.from({ length: 12 }, (_, index) => ({
     id: index,
     left: `${(index * 37 + 11) % 100}%`,
     top: `${(index * 53 + 7) % 100}%`,
