@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from 'fastify';
-import { and, desc, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, ne, sql } from 'drizzle-orm';
 import { db } from '../db/client';
 import { bars, categories, threads, titles, users } from '../db/schema';
 import { optionalUser } from '../lib/guard';
@@ -100,7 +100,7 @@ const homeRoutes: FastifyPluginAsync = async (app) => {
       }).from(threads)
         .innerJoin(bars, eq(bars.id, threads.barId))
         .innerJoin(users, eq(users.id, threads.authorId))
-        .where(and(eq(threads.status, 'open'), eq(threads.isFeatured, true)))
+        .where(and(eq(threads.status, 'open'), eq(threads.isFeatured, true), ne(users.userRole, 'bot')))
         .orderBy(desc(threads.lastPostAt))
         .limit(3),
       leaderboard(5),
@@ -113,7 +113,9 @@ const homeRoutes: FastifyPluginAsync = async (app) => {
     return {
       categories: cats,
       latest,
-      featured: featured.length ? featured : latest.slice(0, 3),
+      featured: featured.length
+        ? featured
+        : latest.filter((thread) => thread.authorUsername !== 'hotbot').slice(0, 3),
       leaderboard: leaders,
       tasks,
       stats: {

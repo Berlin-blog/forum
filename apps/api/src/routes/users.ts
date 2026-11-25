@@ -67,8 +67,19 @@ const usersRoutes: FastifyPluginAsync = async (app) => {
     ] = await Promise.all([
       db.select({ value: sql<number>`count(*)` }).from(userFollows).where(eq(userFollows.followeeId, user.id)),
       db.select({ value: sql<number>`count(*)` }).from(userFollows).where(eq(userFollows.followerId, user.id)),
-      db.select({ value: sql<number>`count(*)` }).from(threads).where(eq(threads.authorId, user.id)),
-      db.select({ value: sql<number>`count(*)` }).from(posts).where(eq(posts.authorId, user.id)),
+      db.select({ value: sql<number>`count(*)` }).from(threads).where(and(
+        eq(threads.authorId, user.id),
+        eq(threads.status, 'open'),
+        isNull(threads.deletedAt),
+      )),
+      db.select({ value: sql<number>`count(*)` }).from(posts)
+        .innerJoin(threads, eq(threads.id, posts.threadId))
+        .where(and(
+          eq(posts.authorId, user.id),
+          eq(posts.status, 'visible'),
+          eq(threads.status, 'open'),
+          isNull(threads.deletedAt),
+        )),
       db.select({ value: sql<number>`count(*)` }).from(checkins).where(eq(checkins.userId, user.id)),
       db.select({ value: sql<number>`count(*)` }).from(reactions).where(and(
         eq(reactions.targetType, 'post'),
@@ -93,7 +104,11 @@ const usersRoutes: FastifyPluginAsync = async (app) => {
         barName: bars.name,
       }).from(threads)
         .innerJoin(bars, eq(bars.id, threads.barId))
-        .where(eq(threads.authorId, user.id))
+        .where(and(
+          eq(threads.authorId, user.id),
+          eq(threads.status, 'open'),
+          isNull(threads.deletedAt),
+        ))
         .orderBy(desc(threads.lastPostAt))
         .limit(20),
       db.select({
@@ -107,7 +122,13 @@ const usersRoutes: FastifyPluginAsync = async (app) => {
       }).from(posts)
         .innerJoin(threads, eq(threads.id, posts.threadId))
         .innerJoin(bars, eq(bars.id, threads.barId))
-        .where(and(eq(posts.authorId, user.id), isNotNull(posts.parentId), eq(posts.status, 'visible')))
+        .where(and(
+          eq(posts.authorId, user.id),
+          isNotNull(posts.parentId),
+          eq(posts.status, 'visible'),
+          eq(threads.status, 'open'),
+          isNull(threads.deletedAt),
+        ))
         .orderBy(desc(posts.createdAt))
         .limit(20),
       db.select({
