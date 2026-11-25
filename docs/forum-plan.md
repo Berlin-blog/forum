@@ -4,7 +4,7 @@
 > 版本：v1.3 · 2026-11-24 · 状态：待实施  
 > 旧版存档：[v1.0](archive/forum-plan-v1.0.md) · [v1.1](archive/forum-plan-v1.1.md) · [v1.2](archive/forum-plan-v1.2.md)  
 > v1.3 修订：隧道从 Cloudflare Quick Tunnel 改为 **ngrok 免费 dev domain**；保留管理员事后处理；仓库公开。配置步骤见 [ngrok-setup.md](ngrok-setup.md)。  
-> 当前实例：API 端口 `3002`（`3001` 已被本机任务排期应用占用），dev domain `promotion-surpass-jazz.ngrok-free.dev`，公网 `/api/health` 已验证。  
+> 当前实例：前端 `https://berlin-blog.github.io/forum/`，API 端口 `3002`（`3001` 已被本机任务排期应用占用），dev domain `promotion-surpass-jazz.ngrok-free.dev`，公网 `/api/health` 已验证。  
 > 实现状态（2026-11-25）：注册 / 登录、吧列表、主题、楼层、无限楼中楼、点赞、举报与管理员事后处理接口已跑通；运行说明见 [README](../README.md)，截图见 [docs/screenshots](screenshots/)。
 
 ---
