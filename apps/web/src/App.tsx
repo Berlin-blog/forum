@@ -1,6 +1,7 @@
 import { HashRouter, Route, Routes } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { BarPage } from './pages/BarPage';
+import { BarManagePage } from './pages/BarManagePage';
 import { BarsPage } from './pages/BarsPage';
 import { CreateBarPage } from './pages/CreateBarPage';
 import { AchievementWallPage } from './pages/AchievementWallPage';
@@ -27,6 +28,7 @@ export function App() {
           <Route path="/achievements" element={<AchievementWallPage />} />
           <Route path="/leaderboard" element={<LeaderboardPage />} />
           <Route path="/b/:slug" element={<BarPage />} />
+          <Route path="/b/:slug/manage" element={<BarManagePage />} />
           <Route path="/b/:slug/new" element={<NewThreadPage />} />
           <Route path="/new" element={<NewThreadPage />} />
           <Route path="/t/:id" element={<ThreadPage />} />

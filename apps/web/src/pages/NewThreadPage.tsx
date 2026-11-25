@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api, ApiError } from '../api';
 import { useAuth } from '../auth';
+import { useDraft } from '../components/useDraft';
 import type { Category } from '../types';
 
 export function NewThreadPage() {
@@ -10,8 +11,8 @@ export function NewThreadPage() {
   const { user, loading: authLoading } = useAuth();
   const [categories, setCategories] = useState<Category[]>([]);
   const [barSlug, setBarSlug] = useState(slug ?? '');
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
+  const [title, setTitle, clearTitle, titleHadDraft] = useDraft('forum:draft:new:title');
+  const [content, setContent, clearContent, contentHadDraft] = useDraft('forum:draft:new:content');
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [previews, setPreviews] = useState<string[]>([]);
@@ -79,6 +80,8 @@ export function NewThreadPage() {
         title,
         content,
       });
+      clearTitle();
+      clearContent();
       navigate(`/t/${data.threadId}`);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : '发布失败');
@@ -157,7 +160,9 @@ export function NewThreadPage() {
             />
             {uploading ? '上传中…' : '插入图片'}
           </label>
-          <span className="muted small">支持 Markdown · 图片 8MB 内</span>
+          <span className="muted small">
+            {(titleHadDraft || contentHadDraft) ? '已恢复草稿 · ' : '草稿自动保存 · '}支持 Markdown · 图片 8MB 内
+          </span>
           <button className="btn primary" disabled={busy || uploading || !title.trim() || !content.trim()}>
             {busy ? '发布中…' : '发布主题'}
           </button>

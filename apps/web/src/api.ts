@@ -70,4 +70,7 @@ export const api = {
   upload<T>(path: string, form: FormData) {
     return request<T>(path, { method: 'POST', body: form });
   },
+  delete<T>(path: string) {
+    return request<T>(path, { method: 'DELETE' });
+  },
 };

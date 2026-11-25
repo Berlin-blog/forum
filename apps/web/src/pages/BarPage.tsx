@@ -10,25 +10,42 @@ export function BarPage() {
   const { user } = useAuth();
   const [bar, setBar] = useState<Bar | null>(null);
   const [threads, setThreads] = useState<ThreadSummary[]>([]);
+  const [total, setTotal] = useState(0);
   const [following, setFollowing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
     setLoading(true);
     Promise.all([
       api.get<{ bar: Bar }>(`/api/bars/${slug}`),
-      api.get<{ items: ThreadSummary[] }>(`/api/threads?bar=${encodeURIComponent(slug)}&limit=30`),
+      api.get<{ items: ThreadSummary[]; total: number }>(`/api/threads?bar=${encodeURIComponent(slug)}&limit=20`),
     ])
       .then(([barData, threadData]) => {
         setBar(barData.bar);
         setFollowing(Boolean(barData.bar.isFollowing));
         setThreads(threadData.items);
+        setTotal(threadData.total);
         setError('');
       })
       .catch(() => setError('这个吧不存在，或者 API 服务没启动'))
       .finally(() => setLoading(false));
   }, [slug]);
+
+  async function loadMore() {
+    if (loadingMore || threads.length >= total) return;
+    setLoadingMore(true);
+    try {
+      const data = await api.get<{ items: ThreadSummary[]; total: number }>(
+        `/api/threads?bar=${encodeURIComponent(slug)}&limit=20&offset=${threads.length}`,
+      );
+      setThreads((current) => [...current, ...data.items]);
+      setTotal(data.total);
+    } finally {
+      setLoadingMore(false);
+    }
+  }
 
   async function toggleFollow() {
     if (!user) return;
@@ -56,6 +73,9 @@ export function BarPage() {
           </div>
         </div>
         <div className="bar-hero-actions">
+          {bar.canManage && (
+            <Link className="btn ghost sm" to={`/b/${bar.slug}/manage`}>吧主管理</Link>
+          )}
           {user ? (
             <button className={`btn ${following ? 'ghost' : 'primary'} sm`} onClick={toggleFollow}>
               {following ? '已关注' : '关注此吧'}
@@ -67,6 +87,18 @@ export function BarPage() {
         </div>
         <span className="bar-hero-seal">谈</span>
       </section>
+
+      {bar.rules && (
+        <section className="bar-rules panel" data-reveal>
+          <div className="section-head">
+            <div className="section-title-wrap">
+              <span className="section-index">规</span>
+              <h2>吧规</h2>
+            </div>
+          </div>
+          <p>{bar.rules}</p>
+        </section>
+      )}
 
       <section className="section" data-reveal>
         <div className="section-head">
@@ -109,6 +141,15 @@ export function BarPage() {
                 </div>
               </Link>
             ))}
+          </div>
+        )}
+
+        {threads.length < total && (
+          <div className="load-more-wrap">
+            <button className="btn ghost" onClick={() => void loadMore()} disabled={loadingMore}>
+              {loadingMore ? '加载中…' : '加载更多'}
+            </button>
+            <span className="muted small">已显示 {threads.length} / {total}</span>
           </div>
         )}
       </section>

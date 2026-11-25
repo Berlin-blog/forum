@@ -28,6 +28,11 @@ type SearchResult = {
     bio: string;
   }>;
   threads: SearchThread[];
+  totals: { bars: number; users: number; threads: number };
+  total: number;
+  limit: number;
+  offset: number;
+  hasMore: boolean;
 };
 
 type SearchType = 'all' | 'bar' | 'thread' | 'user';
@@ -40,22 +45,34 @@ export function SearchPage() {
   const [type, setType] = useState<SearchType>(initialType);
   const [result, setResult] = useState<SearchResult | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState('');
 
-  async function search(q: string, nextType: SearchType) {
+  async function search(q: string, nextType: SearchType, offset = 0) {
     if (!q.trim()) return;
-    setLoading(true);
+    if (offset === 0) setLoading(true);
+    else setLoadingMore(true);
     setError('');
     try {
       const data = await api.get<SearchResult>(
-        `/api/search?q=${encodeURIComponent(q.trim())}&type=${nextType}`,
+        `/api/search?q=${encodeURIComponent(q.trim())}&type=${nextType}&limit=10&offset=${offset}`,
       );
-      setResult(data);
-      setParams({ q: q.trim(), type: nextType });
+      if (offset === 0) {
+        setResult(data);
+        setParams({ q: q.trim(), type: nextType });
+      } else {
+        setResult((current) => current ? {
+          ...data,
+          bars: [...current.bars, ...data.bars],
+          users: [...current.users, ...data.users],
+          threads: [...current.threads, ...data.threads],
+        } : data);
+      }
     } catch {
       setError('搜索失败，请稍后再试');
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   }
 
@@ -71,10 +88,11 @@ export function SearchPage() {
 
   function switchType(nextType: SearchType) {
     setType(nextType);
-    if (query.trim()) void search(query, nextType);
+    if (query.trim()) void search(query, nextType, 0);
   }
 
-  const total = result ? result.bars.length + result.users.length + result.threads.length : 0;
+  const total = result?.total ?? 0;
+  const currentCount = result ? result.bars.length + result.users.length + result.threads.length : 0;
 
   return (
     <div className="search-page">
@@ -185,6 +203,19 @@ export function SearchPage() {
         </section>
       )}
 
+      {result && result.hasMore && (
+        <div className="load-more-wrap">
+          <button
+            className="btn ghost"
+            disabled={loadingMore}
+            onClick={() => void search(query, type, result.offset + result.limit)}
+          >
+            {loadingMore ? '加载中…' : '加载更多'}
+          </button>
+          <span className="muted small">已显示 {currentCount} / {total}</span>
+        </div>
+      )}
+
       {result && total === 0 && (
         <div className="empty">
           <p>没有找到「{result.query}」。</p>
@@ -195,7 +226,7 @@ export function SearchPage() {
       {!result && !loading && (
         <div className="empty">
           <p>输入关键词开始搜索。</p>
-          <p className="muted">支持中文，主题会同时匹配标题与首楼正文。</p>
+          <p className="muted">支持中文，主题会匹配标题、首楼和所有回复。</p>
         </div>
       )}
     </div>

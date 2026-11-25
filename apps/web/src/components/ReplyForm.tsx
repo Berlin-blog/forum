@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, ApiError } from '../api';
 import { useAuth } from '../auth';
+import { useDraft } from './useDraft';
 
 type Props = {
   endpoint: string;
@@ -12,7 +13,9 @@ type Props = {
 
 export function ReplyForm({ endpoint, onCreated, compact, placeholder }: Props) {
   const { user } = useAuth();
-  const [content, setContent] = useState('');
+  const [content, setContent, clearDraft, hadDraft] = useDraft(
+    `forum:draft:reply:${endpoint}`,
+  );
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [previews, setPreviews] = useState<string[]>([]);
@@ -52,7 +55,7 @@ export function ReplyForm({ endpoint, onCreated, compact, placeholder }: Props) 
     setError('');
     try {
       await api.post(endpoint, { content });
-      setContent('');
+      clearDraft();
       setPreviews([]);
       await onCreated();
     } catch (err) {
@@ -91,7 +94,9 @@ export function ReplyForm({ endpoint, onCreated, compact, placeholder }: Props) 
           />
           {uploading ? '上传中…' : '插入图片'}
         </label>
-        <span className="muted small">支持 Markdown · 图片 8MB 内</span>
+        <span className="muted small">
+          {hadDraft ? '已恢复草稿 · ' : '草稿自动保存 · '}支持 Markdown · 图片 8MB 内
+        </span>
         <button className="btn primary sm" disabled={busy || uploading || !content.trim()}>
           {busy ? '提交中…' : '回复'}
         </button>

@@ -219,34 +219,6 @@ export function HomePage() {
               </div>
             )}
           </section>
-
-          <section className="section" data-reveal>
-            <div className="section-head">
-              <div className="section-title-wrap">
-                <span className="section-index">园</span>
-                <h2>游园 · 按分类逛吧</h2>
-              </div>
-              <Link className="section-link" to="/bars">全部 <span>→</span></Link>
-            </div>
-            <div className="category-grid compact-grid">
-              {data.categories.map((category, index) => (
-                <div className="category-card" key={category.id} data-reveal style={{ animationDelay: `${index * 60}ms` }}>
-                  <div className="category-title">
-                    <span className="category-mark">◆</span>
-                    {category.name}
-                  </div>
-                  <div className="bar-links">
-                    {category.bars.map((bar) => (
-                      <Link key={bar.id} className="bar-link" to={`/b/${bar.slug}`}>
-                        <span className="bar-link-name"><span className="gold-dot" />{bar.name}</span>
-                        <span className="muted small">{bar.threadCount} 主题</span>
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
         </div>
 
         <aside className="home-side">
@@ -320,6 +292,34 @@ export function HomePage() {
           </section>
         </aside>
       </div>
+
+      <section className="section home-categories" data-reveal>
+        <div className="section-head">
+          <div className="section-title-wrap">
+            <span className="section-index">园</span>
+            <h2>游园 · 按分类逛吧</h2>
+          </div>
+          <Link className="section-link" to="/bars">全部 <span>→</span></Link>
+        </div>
+        <div className="category-grid compact-grid">
+          {data.categories.map((category, index) => (
+            <div className="category-card" key={category.id} data-reveal style={{ animationDelay: `${index * 60}ms` }}>
+              <div className="category-title">
+                <span className="category-mark">◆</span>
+                {category.name}
+              </div>
+              <div className="bar-links">
+                {category.bars.map((bar) => (
+                  <Link key={bar.id} className="bar-link" to={`/b/${bar.slug}`}>
+                    <span className="bar-link-name"><span className="gold-dot" />{bar.name}</span>
+                    <span className="muted small">{bar.threadCount} 主题</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }

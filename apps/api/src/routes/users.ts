@@ -19,6 +19,22 @@ import {
 import { optionalUser, requireUser } from '../lib/guard';
 import { syncAchievements } from '../lib/progression';
 
+async function withFollowingState<T extends { id: number }>(rows: T[], viewerId?: number) {
+  if (!viewerId || rows.length === 0) {
+    return rows.map((row) => ({ ...row, isFollowing: false, isSelf: false }));
+  }
+  const follows = await db
+    .select({ followeeId: userFollows.followeeId })
+    .from(userFollows)
+    .where(and(eq(userFollows.followerId, viewerId), inArray(userFollows.followeeId, rows.map((row) => row.id))));
+  const set = new Set(follows.map((row) => row.followeeId));
+  return rows.map((row) => ({
+    ...row,
+    isFollowing: set.has(row.id),
+    isSelf: row.id === viewerId,
+  }));
+}
+
 const usersRoutes: FastifyPluginAsync = async (app) => {
   app.get('/api/users/:username', async (request, reply) => {
     const { username } = request.params as { username: string };
@@ -164,6 +180,7 @@ const usersRoutes: FastifyPluginAsync = async (app) => {
 
   app.get('/api/users/:username/followers', async (request, reply) => {
     const { username } = request.params as { username: string };
+    const viewer = await optionalUser(request);
     const [target] = await db.select({ id: users.id }).from(users).where(eq(users.username, username)).limit(1);
     if (!target) return reply.code(404).send({ error: { code: 'USER_NOT_FOUND', message: '用户不存在' } });
 
@@ -185,11 +202,12 @@ const usersRoutes: FastifyPluginAsync = async (app) => {
       .orderBy(desc(userFollows.createdAt))
       .limit(50);
 
-    return { items: rows };
+    return { items: await withFollowingState(rows, viewer?.id) };
   });
 
   app.get('/api/users/:username/following', async (request, reply) => {
     const { username } = request.params as { username: string };
+    const viewer = await optionalUser(request);
     const [target] = await db.select({ id: users.id }).from(users).where(eq(users.username, username)).limit(1);
     if (!target) return reply.code(404).send({ error: { code: 'USER_NOT_FOUND', message: '用户不存在' } });
 
@@ -211,7 +229,7 @@ const usersRoutes: FastifyPluginAsync = async (app) => {
       .orderBy(desc(userFollows.createdAt))
       .limit(50);
 
-    return { items: rows };
+    return { items: await withFollowingState(rows, viewer?.id) };
   });
 
   app.post('/api/users/:username/follow', async (request, reply) => {

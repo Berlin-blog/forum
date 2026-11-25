@@ -23,7 +23,9 @@ const postSelect = {
   parentId: posts.parentId,
   floor: posts.floor,
   contentHtml: posts.contentHtml,
+  contentMd: posts.contentMd,
   createdAt: posts.createdAt,
+  editedAt: posts.editedAt,
   childCount: sql<number>`(
     select count(*) from posts child
     where child.parent_id = ${posts.id} and child.status = 'visible'
@@ -58,7 +60,13 @@ const postsRoutes: FastifyPluginAsync = async (app) => {
       .limit(parsed.data.limit)
       .offset(parsed.data.offset);
 
-    return { items: rows };
+    const [count] = await db
+      .select({ value: sql<number>`count(*)` })
+      .from(posts)
+      .where(and(eq(posts.parentId, id), eq(posts.status, 'visible')));
+
+    const total = Number(count?.value ?? 0);
+    return { items: rows, total, limit: parsed.data.limit, offset: parsed.data.offset, hasMore: parsed.data.offset + rows.length < total };
   });
 
   app.post('/api/threads/:id/posts', async (request, reply) => {
@@ -246,6 +254,102 @@ const postsRoutes: FastifyPluginAsync = async (app) => {
       .limit(1);
 
     return reply.code(201).send({ post });
+  });
+
+  app.patch('/api/posts/:id', async (request, reply) => {
+    const user = await requireUser(request, reply);
+    if (!user) return;
+
+    const postId = Number((request.params as { id: string }).id);
+    if (!Number.isSafeInteger(postId) || postId <= 0) {
+      return reply.code(400).send({ error: { code: 'INVALID_ID', message: '帖子 ID 不合法' } });
+    }
+
+    const parsed = replySchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.code(400).send({ error: { code: 'INVALID_INPUT', message: '回复内容不能为空' } });
+    }
+
+    const [post] = await db.select().from(posts).where(eq(posts.id, postId)).limit(1);
+    if (!post || post.status !== 'visible') {
+      return reply.code(404).send({ error: { code: 'POST_NOT_FOUND', message: '帖子不存在' } });
+    }
+    if (post.authorId !== user.id && user.userRole !== 'admin') {
+      return reply.code(403).send({ error: { code: 'FORBIDDEN', message: '只能修改自己的帖子' } });
+    }
+
+    const resolved = await resolveAttachmentMarkdown(parsed.data.content, user.id);
+    const { html, text } = renderContent(resolved);
+    await db.update(posts).set({
+      contentMd: parsed.data.content,
+      contentHtml: html,
+      contentText: text,
+      editedAt: new Date(),
+    }).where(eq(posts.id, postId));
+
+    const [updated] = await db
+      .select(postSelect)
+      .from(posts)
+      .innerJoin(users, eq(users.id, posts.authorId))
+      .where(eq(posts.id, postId))
+      .limit(1);
+
+    return { post: updated };
+  });
+
+  app.delete('/api/posts/:id', async (request, reply) => {
+    const user = await requireUser(request, reply);
+    if (!user) return;
+
+    const postId = Number((request.params as { id: string }).id);
+    if (!Number.isSafeInteger(postId) || postId <= 0) {
+      return reply.code(400).send({ error: { code: 'INVALID_ID', message: '帖子 ID 不合法' } });
+    }
+
+    const [post] = await db.select().from(posts).where(eq(posts.id, postId)).limit(1);
+    if (!post || post.status !== 'visible') {
+      return reply.code(404).send({ error: { code: 'POST_NOT_FOUND', message: '帖子不存在' } });
+    }
+    if (post.authorId !== user.id && user.userRole !== 'admin') {
+      return reply.code(403).send({ error: { code: 'FORBIDDEN', message: '只能删除自己的帖子' } });
+    }
+    if (post.floor === 1) {
+      return reply.code(400).send({ error: { code: 'CANNOT_DELETE_FIRST', message: '请直接删除主题' } });
+    }
+
+    const [child] = await db
+      .select({ value: sql<number>`count(*)` })
+      .from(posts)
+      .where(and(eq(posts.parentId, postId), eq(posts.status, 'visible')));
+    if (Number(child?.value ?? 0) > 0) {
+      return reply.code(409).send({ error: { code: 'HAS_CHILDREN', message: '这条帖子下面还有回复，先处理楼中楼' } });
+    }
+
+    const [thread] = await db
+      .select({ barId: threads.barId, createdAt: threads.createdAt })
+      .from(threads)
+      .where(eq(threads.id, post.threadId))
+      .limit(1);
+
+    await db.transaction(async (tx) => {
+      await tx.update(posts).set({ status: 'deleted', deletedAt: new Date() }).where(eq(posts.id, postId));
+      if (post.parentId) {
+        await tx.update(posts).set({
+          childCount: sql`greatest(child_count - 1, 0)`,
+        }).where(eq(posts.id, post.parentId));
+      }
+      await tx.update(threads).set({
+        replyCount: sql`greatest(reply_count - 1, 0)`,
+        lastPostAt: sql`coalesce((select max(p.created_at) from posts p where p.thread_id = ${post.threadId} and p.status = 'visible'), ${thread?.createdAt ?? new Date()})`,
+      }).where(eq(threads.id, post.threadId));
+      if (thread) {
+        await tx.update(bars).set({
+          postCount: sql`greatest(post_count - 1, 0)`,
+        }).where(eq(bars.id, thread.barId));
+      }
+    });
+
+    return { ok: true };
   });
 
   app.post('/api/posts/:id/like', async (request, reply) => {

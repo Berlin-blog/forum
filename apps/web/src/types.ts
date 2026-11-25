@@ -16,10 +16,12 @@ export type Bar = {
   slug: string;
   name: string;
   description: string;
+  rules?: string | null;
   threadCount: number;
   postCount: number;
   memberCount: number;
   isFollowing?: boolean;
+  canManage?: boolean;
   createdBy?: number | null;
 };
 
@@ -72,7 +74,9 @@ export type Post = {
   parentId: number | null;
   floor: number | null;
   contentHtml: string;
+  contentMd: string;
   createdAt: string;
+  editedAt: string | null;
   childCount: number;
   authorId: number;
   authorName: string;
@@ -85,6 +89,7 @@ export type FirstPost = {
   contentHtml: string;
   contentMd: string;
   createdAt: string;
+  editedAt: string | null;
 };
 
 export type Title = {

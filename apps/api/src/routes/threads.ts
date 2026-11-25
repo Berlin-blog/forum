@@ -15,6 +15,13 @@ const createThreadSchema = z.object({
   content: z.string().trim().min(1).max(50_000),
 });
 
+const editThreadSchema = z.object({
+  title: z.string().trim().min(5).max(120).optional(),
+  content: z.string().trim().min(1).max(50_000).optional(),
+}).refine((data) => data.title !== undefined || data.content !== undefined, {
+  message: '至少修改一项',
+});
+
 const listQuerySchema = z.object({
   bar: z.string().trim().min(1).max(64).optional(),
   limit: z.coerce.number().int().min(1).max(50).default(20),
@@ -58,7 +65,14 @@ const threadsRoutes: FastifyPluginAsync = async (app) => {
       .limit(limit)
       .offset(offset);
 
-    return { items: rows };
+    const [count] = await db
+      .select({ value: sql<number>`count(*)` })
+      .from(threads)
+      .innerJoin(bars, eq(bars.id, threads.barId))
+      .where(and(...conditions));
+
+    const total = Number(count?.value ?? 0);
+    return { items: rows, total, limit, offset, hasMore: offset + rows.length < total };
   });
 
   app.post('/api/threads', async (request, reply) => {
@@ -124,6 +138,93 @@ const threadsRoutes: FastifyPluginAsync = async (app) => {
     return reply.code(201).send({ threadId: result.id, slug });
   });
 
+  app.patch('/api/threads/:id', async (request, reply) => {
+    const user = await requireUser(request, reply);
+    if (!user) return;
+
+    const id = Number((request.params as { id: string }).id);
+    if (!Number.isSafeInteger(id) || id <= 0) {
+      return reply.code(400).send({ error: { code: 'INVALID_ID', message: '主题 ID 不合法' } });
+    }
+
+    const parsed = editThreadSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.code(400).send({ error: { code: 'INVALID_INPUT', message: '修改内容不合法' } });
+    }
+
+    const [thread] = await db
+      .select()
+      .from(threads)
+      .where(and(eq(threads.id, id), isNull(threads.deletedAt)))
+      .limit(1);
+    if (!thread) {
+      return reply.code(404).send({ error: { code: 'THREAD_NOT_FOUND', message: '主题不存在' } });
+    }
+    if (thread.authorId !== user.id && user.userRole !== 'admin') {
+      return reply.code(403).send({ error: { code: 'FORBIDDEN', message: '只能修改自己的主题' } });
+    }
+
+    const [firstPost] = await db
+      .select()
+      .from(posts)
+      .where(and(eq(posts.threadId, id), eq(posts.floor, 1)))
+      .limit(1);
+
+    const updates: Record<string, unknown> = { updatedAt: new Date() };
+    if (parsed.data.title !== undefined) updates.title = parsed.data.title;
+
+    await db.transaction(async (tx) => {
+      if (parsed.data.content !== undefined && firstPost) {
+        const resolved = await resolveAttachmentMarkdown(parsed.data.content, user.id);
+        const { html, text } = renderContent(resolved);
+        await tx.update(posts).set({
+          contentMd: parsed.data.content,
+          contentHtml: html,
+          contentText: text,
+          editedAt: new Date(),
+        }).where(eq(posts.id, firstPost.id));
+      }
+      await tx.update(threads).set(updates).where(eq(threads.id, id));
+    });
+
+    return { ok: true };
+  });
+
+  app.delete('/api/threads/:id', async (request, reply) => {
+    const user = await requireUser(request, reply);
+    if (!user) return;
+
+    const id = Number((request.params as { id: string }).id);
+    if (!Number.isSafeInteger(id) || id <= 0) {
+      return reply.code(400).send({ error: { code: 'INVALID_ID', message: '主题 ID 不合法' } });
+    }
+
+    const [thread] = await db
+      .select()
+      .from(threads)
+      .where(and(eq(threads.id, id), isNull(threads.deletedAt)))
+      .limit(1);
+    if (!thread) {
+      return reply.code(404).send({ error: { code: 'THREAD_NOT_FOUND', message: '主题不存在' } });
+    }
+    if (thread.authorId !== user.id && user.userRole !== 'admin') {
+      return reply.code(403).send({ error: { code: 'FORBIDDEN', message: '只能删除自己的主题' } });
+    }
+
+    const now = new Date();
+    await db.transaction(async (tx) => {
+      await tx.update(posts).set({ status: 'deleted', deletedAt: now }).where(eq(posts.threadId, id));
+      await tx.update(threads).set({ status: 'deleted', deletedAt: now, updatedAt: now }).where(eq(threads.id, id));
+      await tx.update(bars).set({
+        threadCount: sql`(select count(*) from threads t where t.bar_id = ${thread.barId} and t.status = 'open' and t.deleted_at is null)`,
+        postCount: sql`(select count(*) from posts p inner join threads t on t.id = p.thread_id where t.bar_id = ${thread.barId} and p.status = 'visible')`,
+        lastThreadId: sql`(select t2.id from threads t2 where t2.bar_id = ${thread.barId} and t2.status = 'open' and t2.deleted_at is null order by t2.last_post_at desc limit 1)`,
+      }).where(eq(bars.id, thread.barId));
+    });
+
+    return { ok: true };
+  });
+
   app.get('/api/threads/:id', async (request, reply) => {
     const id = Number((request.params as { id: string }).id);
     if (!Number.isSafeInteger(id) || id <= 0) {
@@ -162,6 +263,7 @@ const threadsRoutes: FastifyPluginAsync = async (app) => {
         contentHtml: posts.contentHtml,
         contentMd: posts.contentMd,
         createdAt: posts.createdAt,
+        editedAt: posts.editedAt,
       })
       .from(posts)
       .where(and(eq(posts.threadId, id), eq(posts.floor, 1), eq(posts.status, 'visible')))
@@ -192,7 +294,9 @@ const threadsRoutes: FastifyPluginAsync = async (app) => {
         parentId: posts.parentId,
         floor: posts.floor,
         contentHtml: posts.contentHtml,
+        contentMd: posts.contentMd,
         createdAt: posts.createdAt,
+        editedAt: posts.editedAt,
         childCount: sql<number>`(
           select count(*) from posts child
           where child.parent_id = ${posts.id} and child.status = 'visible'
@@ -213,7 +317,13 @@ const threadsRoutes: FastifyPluginAsync = async (app) => {
       .limit(query.data.limit)
       .offset(query.data.offset);
 
-    return { items: rows };
+    const [count] = await db
+      .select({ value: sql<number>`count(*)` })
+      .from(posts)
+      .where(and(eq(posts.threadId, id), isNull(posts.parentId), eq(posts.status, 'visible')));
+
+    const total = Number(count?.value ?? 0);
+    return { items: rows, total, limit: query.data.limit, offset: query.data.offset, hasMore: query.data.offset + rows.length < total };
   });
 };
 

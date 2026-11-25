@@ -38,6 +38,12 @@ export function NotificationsPage() {
       return;
     }
     load().catch(() => setLoading(false));
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        load().catch(() => undefined);
+      }
+    }, 30_000);
+    return () => window.clearInterval(timer);
   }, [user]);
 
   async function markAllRead() {

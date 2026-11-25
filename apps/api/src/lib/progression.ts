@@ -24,10 +24,10 @@ export const LEVEL_THRESHOLDS = [
 ];
 
 export const XP_RULES = {
-  thread: { amount: 5, dailyCap: 15 },
-  reply: { amount: 3, dailyCap: 15 },
-  received_reply: { amount: 2, dailyCap: 10 },
-  checkin: { amount: 5, dailyCap: 5 },
+  thread: { amount: 8, dailyCap: 40 },
+  reply: { amount: 5, dailyCap: 40 },
+  received_reply: { amount: 3, dailyCap: 30 },
+  checkin: { amount: 8, dailyCap: 8 },
 } as const;
 
 export type XpSource = keyof typeof XP_RULES;
@@ -232,7 +232,7 @@ export async function getDailyTasks(userId: number) {
       description: '每日签到一次',
       progress: Number(checkinTodayRow?.value ?? 0),
       target: 1,
-      reward: '+5 经验',
+      reward: '+8 经验',
     },
     {
       key: 'thread',
@@ -240,7 +240,7 @@ export async function getDailyTasks(userId: number) {
       description: '发布 1 个主题',
       progress: Number(threadsToday?.value ?? 0),
       target: 1,
-      reward: '+5 经验',
+      reward: '+8 经验',
     },
     {
       key: 'reply',
@@ -248,7 +248,7 @@ export async function getDailyTasks(userId: number) {
       description: '发布 3 条回复',
       progress: Number(repliesToday?.value ?? 0),
       target: 3,
-      reward: '+9 经验',
+      reward: '+15 经验',
     },
     {
       key: 'received',
@@ -256,7 +256,7 @@ export async function getDailyTasks(userId: number) {
       description: '收到 1 条回复',
       progress: Number(receivedToday?.value ?? 0),
       target: 1,
-      reward: '+2 经验',
+      reward: '+3 经验',
     },
   ];
 

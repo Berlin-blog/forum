@@ -70,7 +70,7 @@ export function CheckInButton() {
       <div className="checkin-top">
         <span className="checkin-label">每日签到</span>
         <button className={`btn ${checkedIn ? 'ghost' : 'primary'} sm`} onClick={checkin} disabled={busy || checkedIn}>
-          {checkedIn ? '今日已签到' : busy ? '签到中…' : '签到 +5 经验'}
+          {checkedIn ? '今日已签到' : busy ? '签到中…' : '签到 +8 经验'}
         </button>
       </div>
       {progress && <XpBar progress={progress} />}
@@ -101,8 +101,12 @@ export function NotificationBell() {
     }
 
     load();
+    const timer = window.setInterval(load, 25_000);
     window.addEventListener('notifications-read', clear);
-    return () => window.removeEventListener('notifications-read', clear);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener('notifications-read', clear);
+    };
   }, [user, location.pathname]);
 
   if (!user) return null;
