@@ -4,8 +4,8 @@
   --ivory: #fbf8f0;
   --ivory-strong: #fffdf8;
   --ink: #211d18;
-  --ink-soft: #4b4338;
-  --muted: #8a7c69;
+  --ink-soft: #443b31;
+  --muted: #736553;
   --line: rgba(92, 68, 40, 0.16);
   --line-strong: rgba(92, 68, 40, 0.3);
   --gold: #ad8550;
@@ -64,6 +64,11 @@ body::after {
 a { color: inherit; text-decoration: none; }
 button, input, textarea, select { font: inherit; }
 button { cursor: pointer; }
+
+:focus-visible {
+  outline: 1px solid var(--gold);
+  outline-offset: 3px;
+}
 
 img { max-width: 100%; }
 
