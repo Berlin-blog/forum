@@ -68,15 +68,18 @@ export function NewThreadPage() {
 
   return (
     <div className="form-page">
-      <div className="page-head">
+      <div className="page-head" data-reveal>
         <div>
-          <p className="eyebrow">发主题</p>
+          <p className="eyebrow"><span className="eyebrow-rule" />发主题</p>
           <h1>开一个新讨论</h1>
           <p className="muted">标题写具体一点，正文支持 Markdown。提交后立即展示。</p>
         </div>
+        <span className="page-head-seal">启</span>
       </div>
 
-      <form className="panel form" onSubmit={submit}>
+      <form className="panel form" onSubmit={submit} data-reveal>
+        <span className="card-corner tl" aria-hidden="true" />
+        <span className="card-corner br" aria-hidden="true" />
         <label>
           发布到
           <select value={barSlug} onChange={(event) => setBarSlug(event.target.value)} required>

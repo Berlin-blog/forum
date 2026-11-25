@@ -28,8 +28,20 @@ export function LoginPage() {
 
   return (
     <div className="auth-page">
-      <form className="panel form auth-form" onSubmit={submit}>
-        <p className="eyebrow">欢迎回来</p>
+      <aside className="auth-aside" aria-hidden="true">
+        <span className="auth-aside-seal">清</span>
+        <span className="auth-aside-kicker">东方雅集 · 清谈</span>
+        <h2>清谈<br />不论高低</h2>
+        <p>一席清谈，半卷闲书。<br />来者皆是客。</p>
+        <span className="auth-aside-rule" />
+        <span className="auth-aside-foot">— 雅集小引</span>
+      </aside>
+
+      <form className="panel form auth-form" onSubmit={submit} data-reveal>
+        <span className="auth-seal">雅</span>
+        <span className="card-corner tl" aria-hidden="true" />
+        <span className="card-corner br" aria-hidden="true" />
+        <p className="eyebrow"><span className="eyebrow-rule" />欢迎回来</p>
         <h1>登录</h1>
         <p className="muted">没有账号？<Link to="/register">直接注册</Link></p>
 

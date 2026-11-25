@@ -17,20 +17,31 @@ export function BarsPage() {
 
   return (
     <div>
-      <div className="page-head">
+      <div className="page-head" data-reveal>
         <div>
-          <p className="eyebrow">吧广场</p>
+          <p className="eyebrow"><span className="eyebrow-rule" />吧广场</p>
           <h1>所有吧</h1>
           <p className="muted">选一个吧进去发帖；没有合适的，先在站务反馈里提。</p>
         </div>
+        <span className="page-head-seal">集</span>
       </div>
 
       {error && <p className="notice error">{error}</p>}
       {loading ? <p className="muted">加载中…</p> : (
         <div className="category-grid">
-          {categories.map((category) => (
-            <div className="category-card" key={category.id}>
-              <div className="category-title">{category.name}</div>
+          {categories.map((category, index) => (
+            <div
+              className="category-card"
+              key={category.id}
+              data-reveal
+              style={{ animationDelay: `${index * 70}ms` }}
+            >
+              <span className="card-corner tl" aria-hidden="true" />
+              <span className="card-corner br" aria-hidden="true" />
+              <div className="category-title">
+                <span className="category-mark">◆</span>
+                {category.name}
+              </div>
               <div className="bar-cards">
                 {category.bars.map((bar) => (
                   <Link key={bar.id} className="bar-card" to={`/b/${bar.slug}`}>

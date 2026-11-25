@@ -49,7 +49,8 @@ export function PostNode({ post, depth, onChanged }: Props) {
   }
 
   return (
-    <article className={`post-node depth-${Math.min(depth, 3)}`} data-depth={depth}>
+    <article className={`post-node depth-${Math.min(depth, 3)}`} data-depth={depth} data-reveal>
+      <span className="post-seal" aria-hidden="true">{post.floor ? '层' : '复'}</span>
       <div className="post-head">
         <span className="post-author">{post.authorName}</span>
         <span className="muted small">@{post.authorUsername}</span>

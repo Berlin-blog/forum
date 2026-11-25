@@ -29,8 +29,20 @@ export function RegisterPage() {
 
   return (
     <div className="auth-page">
-      <form className="panel form auth-form" onSubmit={submit}>
-        <p className="eyebrow">开放注册</p>
+      <aside className="auth-aside" aria-hidden="true">
+        <span className="auth-aside-seal">集</span>
+        <span className="auth-aside-kicker">东方雅集 · 入席</span>
+        <h2>雅俗共赏<br />来者不拒</h2>
+        <p>不必递帖，不必通名。<br />取一个名字，便可入席。</p>
+        <span className="auth-aside-rule" />
+        <span className="auth-aside-foot">— 雅集小引</span>
+      </aside>
+
+      <form className="panel form auth-form" onSubmit={submit} data-reveal>
+        <span className="auth-seal">集</span>
+        <span className="card-corner tl" aria-hidden="true" />
+        <span className="card-corner br" aria-hidden="true" />
+        <p className="eyebrow"><span className="eyebrow-rule" />开放注册</p>
         <h1>创建账号</h1>
         <p className="muted">不需要邮箱、邀请码或验证码。已有账号？<Link to="/login">登录</Link></p>
 

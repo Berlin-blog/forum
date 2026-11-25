@@ -33,7 +33,7 @@ export function UserPage() {
 
   return (
     <div>
-      <section className="profile-hero">
+      <section className="profile-hero" data-reveal>
         <div className="avatar">{user.displayName.slice(0, 1)}</div>
         <div>
           <h1>{user.displayName}</h1>
@@ -41,18 +41,29 @@ export function UserPage() {
           <p>{user.bio || '这个人很懒，还没有写简介。'}</p>
           <p className="muted small">加入于 {formatTime(user.createdAt)}</p>
         </div>
+        <span className="profile-seal">客</span>
       </section>
 
-      <section className="section">
+      <section className="section" data-reveal>
         <div className="section-head">
-          <h2>最近发布的主题</h2>
+          <div className="section-title-wrap">
+            <span className="section-index">迹</span>
+            <h2>最近发布的主题</h2>
+          </div>
         </div>
         {threads.length === 0 ? (
           <p className="muted">还没有发布主题。</p>
         ) : (
           <div className="thread-list">
-            {threads.map((thread) => (
-              <Link className="thread-row" key={thread.id} to={`/t/${thread.id}`}>
+            {threads.map((thread, index) => (
+              <Link
+                className="thread-row"
+                key={thread.id}
+                to={`/t/${thread.id}`}
+                data-reveal
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
+                <span className="thread-index">{String(index + 1).padStart(2, '0')}</span>
                 <div className="thread-main">
                   <div className="thread-title">{thread.title}</div>
                   <div className="thread-meta">

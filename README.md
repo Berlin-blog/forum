@@ -2,6 +2,9 @@
 
 一个贴吧式的综合讨论社区：吧、主题、楼层、无限楼中楼、开放注册、无发帖前审核。
 
+视觉方向：**象牙白 + 古铜金 · 东方雅致 · 衬线标题 + 无衬线正文 · 强氛围动效**。  
+用宣纸底、墨色、印章、金线、噪点与缓慢漂浮的金尘，做“华丽但克制”的东方编辑感。
+
 - 前端：Vite + React + TypeScript + HashRouter
 - 后端：Fastify + Drizzle ORM + MySQL 8.4
 - 部署：GitHub Pages（静态前端）+ 当前电脑 API + ngrok 免费 dev domain
@@ -9,6 +12,8 @@
 ![首页](docs/screenshots/home.png)
 
 ![主题与楼中楼](docs/screenshots/thread-expanded.png)
+
+![登录页](docs/screenshots/login.png)
 
 ---
 

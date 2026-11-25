@@ -1,5 +1,6 @@
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth';
+import { Atmosphere, ScrollProgress } from './Atmosphere';
 
 const siteName = window.__FORUM_CONFIG__?.siteName ?? '论坛';
 
@@ -14,12 +15,20 @@ export function Layout() {
 
   return (
     <div className="shell">
+      <ScrollProgress />
+      <Atmosphere />
+
       <header className="topbar">
         <div className="container topbar-inner">
           <Link className="brand" to="/">
-            <span className="brand-mark">论</span>
-            <span>{siteName}</span>
+            <span className="brand-seal">论</span>
+            <span className="brand-text">
+              <strong>{siteName}</strong>
+              <small>东方雅集</small>
+            </span>
           </Link>
+
+          <span className="nav-divider" aria-hidden="true" />
 
           <nav className="nav">
             <NavLink to="/" end>首页</NavLink>
@@ -30,7 +39,8 @@ export function Layout() {
             {user ? (
               <>
                 <Link className="user-chip" to={`/u/${user.username}`}>
-                  {user.displayName}
+                  <span className="user-dot">{user.displayName.slice(0, 1)}</span>
+                  <span>{user.displayName}</span>
                 </Link>
                 <button className="btn ghost sm" onClick={handleLogout}>退出</button>
               </>
@@ -50,8 +60,11 @@ export function Layout() {
 
       <footer className="footer">
         <div className="container footer-inner">
-          <span>{siteName} · 贴吧式讨论社区</span>
-          <span>零成本个人项目 · 内容由用户发布</span>
+          <div className="footer-brand">
+            <span className="footer-seal">雅</span>
+            <span>{siteName} · 东方雅集</span>
+          </div>
+          <span className="footer-note">零成本个人项目 · 内容由用户发布 · 清谈为主，雅俗共赏</span>
         </div>
       </footer>
     </div>

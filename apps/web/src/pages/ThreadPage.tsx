@@ -48,19 +48,23 @@ export function ThreadPage() {
         <span>主题</span>
       </nav>
 
-      <header className="thread-header">
-        <h1>{thread.title}</h1>
-        <div className="thread-meta">
-          <span>@{thread.authorUsername}</span>
-          <span>{formatTime(thread.createdAt)}</span>
-          <span>{thread.viewCount} 浏览</span>
-          <span>{thread.replyCount} 回复</span>
-          {locked && <span className="badge locked">已锁定</span>}
+      <header className="thread-header" data-reveal>
+        <div className="thread-header-main">
+          <h1>{thread.title}</h1>
+          <div className="thread-meta">
+            <span>@{thread.authorUsername}</span>
+            <span>{formatTime(thread.createdAt)}</span>
+            <span>{thread.viewCount} 浏览</span>
+            <span>{thread.replyCount} 回复</span>
+            {locked && <span className="badge locked">已锁定</span>}
+          </div>
         </div>
+        <span className="thread-seal">谈</span>
       </header>
 
       {firstPost && (
-        <article className="first-post">
+        <article className="first-post" data-reveal>
+          <span className="first-post-seal">帖</span>
           <div className="post-head">
             <span className="post-author">{thread.authorName}</span>
             <span className="muted small">楼主</span>
@@ -78,9 +82,12 @@ export function ThreadPage() {
         )}
       </section>
 
-      <section className="reply-box">
+      <section className="reply-box" data-reveal>
         <div className="section-head">
-          <h2>回复主题</h2>
+          <div className="section-title-wrap">
+            <span className="section-index">复</span>
+            <h2>回复主题</h2>
+          </div>
           <span className="muted small">直接展示，无审核</span>
         </div>
         {locked ? (

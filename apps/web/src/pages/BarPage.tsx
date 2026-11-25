@@ -32,10 +32,10 @@ export function BarPage() {
 
   return (
     <div>
-      <section className="bar-hero">
+      <section className="bar-hero" data-reveal>
         <div className="bar-avatar large">{bar.name.slice(0, 1)}</div>
         <div className="bar-hero-main">
-          <p className="eyebrow">吧</p>
+          <p className="eyebrow"><span className="eyebrow-rule" />吧</p>
           <h1>{bar.name}</h1>
           <p className="muted">{bar.description || '暂无简介'}</p>
           <div className="bar-stats">
@@ -45,11 +45,15 @@ export function BarPage() {
           </div>
         </div>
         <Link className="btn primary" to={`/b/${bar.slug}/new`}>发主题</Link>
+        <span className="bar-hero-seal">谈</span>
       </section>
 
-      <section className="section">
+      <section className="section" data-reveal>
         <div className="section-head">
-          <h2>主题列表</h2>
+          <div className="section-title-wrap">
+            <span className="section-index">录</span>
+            <h2>主题列表</h2>
+          </div>
           <span className="muted small">按最后回复排序</span>
         </div>
         {threads.length === 0 ? (
@@ -59,8 +63,15 @@ export function BarPage() {
           </div>
         ) : (
           <div className="thread-list">
-            {threads.map((thread) => (
-              <Link className="thread-row" key={thread.id} to={`/t/${thread.id}`}>
+            {threads.map((thread, index) => (
+              <Link
+                className="thread-row"
+                key={thread.id}
+                to={`/t/${thread.id}`}
+                data-reveal
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
+                <span className="thread-index">{String(index + 1).padStart(2, '0')}</span>
                 <div className="thread-main">
                   <div className="thread-title">
                     {thread.isPinned && <span className="badge pinned">置顶</span>}
