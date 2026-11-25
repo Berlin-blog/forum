@@ -1,0 +1,86 @@
+import { useEffect, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { api } from '../api';
+import { formatTime } from '../format';
+import type { Bar, ThreadSummary } from '../types';
+
+export function BarPage() {
+  const { slug = '' } = useParams();
+  const [bar, setBar] = useState<Bar | null>(null);
+  const [threads, setThreads] = useState<ThreadSummary[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    setLoading(true);
+    Promise.all([
+      api.get<{ bar: Bar }>(`/api/bars/${slug}`),
+      api.get<{ items: ThreadSummary[] }>(`/api/threads?bar=${encodeURIComponent(slug)}&limit=30`),
+    ])
+      .then(([barData, threadData]) => {
+        setBar(barData.bar);
+        setThreads(threadData.items);
+        setError('');
+      })
+      .catch(() => setError('这个吧不存在，或者 API 服务没启动'))
+      .finally(() => setLoading(false));
+  }, [slug]);
+
+  if (loading) return <p className="muted">加载中…</p>;
+  if (error) return <p className="notice error">{error}</p>;
+  if (!bar) return null;
+
+  return (
+    <div>
+      <section className="bar-hero">
+        <div className="bar-avatar large">{bar.name.slice(0, 1)}</div>
+        <div className="bar-hero-main">
+          <p className="eyebrow">吧</p>
+          <h1>{bar.name}</h1>
+          <p className="muted">{bar.description || '暂无简介'}</p>
+          <div className="bar-stats">
+            <span><strong>{bar.threadCount}</strong> 主题</span>
+            <span><strong>{bar.postCount}</strong> 帖子</span>
+            <span><strong>{bar.memberCount}</strong> 关注</span>
+          </div>
+        </div>
+        <Link className="btn primary" to={`/b/${bar.slug}/new`}>发主题</Link>
+      </section>
+
+      <section className="section">
+        <div className="section-head">
+          <h2>主题列表</h2>
+          <span className="muted small">按最后回复排序</span>
+        </div>
+        {threads.length === 0 ? (
+          <div className="empty">
+            <p>这个吧还没有主题。</p>
+            <Link className="btn primary sm" to={`/b/${bar.slug}/new`}>发第一帖</Link>
+          </div>
+        ) : (
+          <div className="thread-list">
+            {threads.map((thread) => (
+              <Link className="thread-row" key={thread.id} to={`/t/${thread.id}`}>
+                <div className="thread-main">
+                  <div className="thread-title">
+                    {thread.isPinned && <span className="badge pinned">置顶</span>}
+                    {thread.isFeatured && <span className="badge featured">精华</span>}
+                    {thread.title}
+                  </div>
+                  <div className="thread-meta">
+                    <span>@{thread.authorUsername}</span>
+                    <span>{formatTime(thread.lastPostAt)}</span>
+                  </div>
+                </div>
+                <div className="thread-stats">
+                  <strong>{thread.replyCount}</strong>
+                  <span>回复</span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
