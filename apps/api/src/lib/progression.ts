@@ -63,15 +63,31 @@ function startOfUtcDay() {
   return now;
 }
 
-async function insertIgnoreTitles(tx: Tx, userId: number, level: number) {
+async function insertIgnoreTitles(
+  tx: Tx,
+  userId: number,
+  level: number,
+  metrics?: Record<string, number>,
+) {
   const available = await tx
-    .select({ id: titles.id })
-    .from(titles)
-    .where(sql`${titles.minLevel} <= ${level}`);
+    .select({
+      id: titles.id,
+      minLevel: titles.minLevel,
+      conditionType: titles.conditionType,
+      conditionThreshold: titles.conditionThreshold,
+    })
+    .from(titles);
 
-  if (!available.length) return;
+  const unlocked = available.filter((title) => {
+    if (title.conditionType) {
+      return Boolean(metrics && (metrics[title.conditionType] ?? 0) >= (title.conditionThreshold ?? 0));
+    }
+    return title.minLevel <= level;
+  });
+
+  if (!unlocked.length) return;
   const now = new Date();
-  const values = available.map((title) => `(${userId}, ${title.id}, '${now.toISOString().slice(0, 19).replace('T', ' ')}')`);
+  const values = unlocked.map((title) => `(${userId}, ${title.id}, '${now.toISOString().slice(0, 19).replace('T', ' ')}')`);
   await tx.execute(sql.raw(`INSERT IGNORE INTO user_titles (user_id, title_id, acquired_at) VALUES ${values.join(', ')}`));
 }
 
@@ -90,7 +106,7 @@ async function insertIgnoreAchievements(tx: Tx, userId: number, unlocked: number
 export async function syncAchievements(tx: Tx, userId: number, level: number) {
   const userPostIds = tx.select({ id: posts.id }).from(posts).where(eq(posts.authorId, userId));
 
-  const [[threadCount], [replyCount], [followerCount], [checkinCount], [likeCount], [barCount], [barMemberCount]] = await Promise.all([
+  const [[threadCount], [replyCount], [followerCount], [checkinCount], [likeCount], [barCount], [barMemberCount], [nightPostCount]] = await Promise.all([
     tx.select({ value: sql<number>`count(*)` }).from(threads).where(eq(threads.authorId, userId)),
     tx.select({ value: sql<number>`count(*)` }).from(posts).where(and(eq(posts.authorId, userId), isNotNull(posts.parentId))),
     tx.select({ value: sql<number>`count(*)` }).from(userFollows).where(eq(userFollows.followeeId, userId)),
@@ -101,6 +117,10 @@ export async function syncAchievements(tx: Tx, userId: number, level: number) {
     )),
     tx.select({ value: sql<number>`count(*)` }).from(bars).where(eq(bars.createdBy, userId)),
     tx.select({ value: sql<number>`coalesce(sum(${bars.memberCount}), 0)` }).from(bars).where(eq(bars.createdBy, userId)),
+    tx.select({ value: sql<number>`count(*)` }).from(posts).where(and(
+      eq(posts.authorId, userId),
+      sql`hour(${posts.createdAt}) between 0 and 5`,
+    )),
   ]);
 
   const metrics: Record<string, number> = {
@@ -112,6 +132,7 @@ export async function syncAchievements(tx: Tx, userId: number, level: number) {
     likes_received: Number(likeCount?.value ?? 0),
     bars_created: Number(barCount?.value ?? 0),
     bar_members: Number(barMemberCount?.value ?? 0),
+    night_posts: Number(nightPostCount?.value ?? 0),
   };
 
   const all = await tx.select({ id: achievements.id, conditionType: achievements.conditionType, threshold: achievements.threshold })
@@ -121,6 +142,7 @@ export async function syncAchievements(tx: Tx, userId: number, level: number) {
     .map((item) => item.id);
 
   await insertIgnoreAchievements(tx, userId, unlocked);
+  await insertIgnoreTitles(tx, userId, level, metrics);
   return unlocked;
 }
 

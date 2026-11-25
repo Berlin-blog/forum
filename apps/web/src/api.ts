@@ -28,6 +28,23 @@ export class ApiError extends Error {
   }
 }
 
+export function describeApiError(err: unknown, fallback = '请求失败') {
+  if (err instanceof ApiError) {
+    if (err.status === 401) return '登录已失效，请重新登录';
+    if (err.status === 403) return '没有权限执行这个操作';
+    if (err.status === 404) return '目标不存在或已被删除';
+    if (err.status === 409) return err.message || '操作冲突，请刷新后再试';
+    if (err.status === 413) return '内容或图片超过大小限制';
+    if (err.status === 429) return '操作太频繁，请稍后再试';
+    if (err.status >= 500) return '服务暂时不可用，请稍后重试';
+    return err.message || fallback;
+  }
+  if (err instanceof TypeError) {
+    return '网络或 API 暂时不可用，内容已保存为草稿';
+  }
+  return fallback;
+}
+
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const token = getToken();
   const headers = new Headers(init.headers);

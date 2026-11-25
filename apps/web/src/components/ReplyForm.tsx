@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { api, ApiError } from '../api';
+import { api, ApiError, describeApiError } from '../api';
 import { useAuth } from '../auth';
 import { useDraft } from './useDraft';
 
@@ -59,7 +59,7 @@ export function ReplyForm({ endpoint, onCreated, compact, placeholder }: Props) 
       setPreviews([]);
       await onCreated();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : '回复失败');
+      setError(`回复失败：${describeApiError(err, '请稍后重试')}`);
     } finally {
       setBusy(false);
     }

@@ -14,6 +14,7 @@ import { NotificationsPage } from './pages/NotificationsPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { SearchPage } from './pages/SearchPage';
 import { ThreadPage } from './pages/ThreadPage';
+import { TitlesPage } from './pages/TitlesPage';
 import { ProfilePage } from './pages/UserPage';
 
 export function App() {
@@ -26,6 +27,7 @@ export function App() {
           <Route path="/create-bar" element={<CreateBarPage />} />
           <Route path="/search" element={<SearchPage />} />
           <Route path="/achievements" element={<AchievementWallPage />} />
+          <Route path="/titles" element={<TitlesPage />} />
           <Route path="/leaderboard" element={<LeaderboardPage />} />
           <Route path="/b/:slug" element={<BarPage />} />
           <Route path="/b/:slug/manage" element={<BarManagePage />} />

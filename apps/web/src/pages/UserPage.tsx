@@ -242,6 +242,7 @@ export function ProfilePage() {
                 <span className="section-index">号</span>
                 <h2>称号</h2>
               </div>
+              <Link className="section-link" to="/titles">全部 <span>→</span></Link>
             </div>
             {profile.titles.length === 0 ? (
               <p className="muted">还没有获得称号。</p>

@@ -232,6 +232,8 @@ export const titles = mysqlTable('titles', {
   description: varchar('description', { length: 255 }).notNull().default(''),
   icon: varchar('icon', { length: 4 }).notNull().default('雅'),
   minLevel: int('min_level').notNull().default(1),
+  conditionType: varchar('condition_type', { length: 32 }),
+  conditionThreshold: int('condition_threshold', { unsigned: true }),
   sortOrder: int('sort_order').notNull().default(0),
 }, (table) => [
   uniqueIndex('uk_titles_slug').on(table.slug),
