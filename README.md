@@ -310,5 +310,6 @@ D:\code\work\forum\scripts\reset-admin-password.ps1
 ## 文档
 
 - [建设方案 v1.3](docs/forum-plan.md)
+- [项目评估与优化路线](docs/project-review.md)
 - [ngrok 配置指南](docs/ngrok-setup.md)
 - [v1.2 存档](docs/archive/forum-plan-v1.2.md)
