@@ -7,6 +7,8 @@ import { db, pool } from './db/client';
 import authRoutes from './routes/auth';
 import adminRoutes from './routes/admin';
 import barsRoutes from './routes/bars';
+import meRoutes from './routes/me';
+import notificationsRoutes from './routes/notifications';
 import postsRoutes from './routes/posts';
 import threadsRoutes from './routes/threads';
 import usersRoutes from './routes/users';
@@ -59,6 +61,8 @@ app.get('/', async () => ({
 await app.register(authRoutes);
 await app.register(adminRoutes);
 await app.register(barsRoutes);
+await app.register(meRoutes);
+await app.register(notificationsRoutes);
 await app.register(threadsRoutes);
 await app.register(postsRoutes);
 await app.register(usersRoutes);

@@ -2,6 +2,7 @@ import {
   bigint,
   boolean,
   char,
+  date,
   datetime,
   index,
   int,
@@ -22,6 +23,9 @@ export const users = mysqlTable('users', {
   bio: varchar('bio', { length: 500 }).notNull().default(''),
   userRole: varchar('user_role', { length: 16 }).notNull().default('member'),
   status: varchar('status', { length: 16 }).notNull().default('active'),
+  level: int('level').notNull().default(1),
+  exp: int('exp').notNull().default(0),
+  equippedTitleId: int('equipped_title_id', { unsigned: true }),
   createdAt: datetime('created_at', { mode: 'date', fsp: 3 }).notNull(),
   lastSeenAt: datetime('last_seen_at', { mode: 'date', fsp: 3 }),
 }, (table) => [
@@ -136,6 +140,16 @@ export const barMembers = mysqlTable('bar_members', {
   index('idx_bar_members_bar').on(table.barId, table.joinedAt),
 ]);
 
+export const barModerators = mysqlTable('bar_moderators', {
+  barId: bigint('bar_id', { mode: 'number', unsigned: true }).notNull(),
+  userId: bigint('user_id', { mode: 'number', unsigned: true }).notNull(),
+  modRole: varchar('mod_role', { length: 16 }).notNull().default('moderator'),
+  createdAt: datetime('created_at', { mode: 'date', fsp: 3 }).notNull(),
+}, (table) => [
+  uniqueIndex('uk_bar_moderators').on(table.barId, table.userId),
+  index('idx_bar_moderators_user').on(table.userId),
+]);
+
 export const notifications = mysqlTable('notifications', {
   id: bigint('id', { mode: 'number', unsigned: true }).autoincrement().primaryKey(),
   userId: bigint('user_id', { mode: 'number', unsigned: true }).notNull(),
@@ -181,6 +195,75 @@ export const moderationActions = mysqlTable('moderation_actions', {
 }, (table) => [
   index('idx_moderation_target').on(table.targetType, table.targetId),
   index('idx_moderation_bar').on(table.barId, table.createdAt),
+]);
+
+export const xpEvents = mysqlTable('xp_events', {
+  id: bigint('id', { mode: 'number', unsigned: true }).autoincrement().primaryKey(),
+  userId: bigint('user_id', { mode: 'number', unsigned: true }).notNull(),
+  source: varchar('source', { length: 24 }).notNull(),
+  amount: int('amount').notNull(),
+  createdAt: datetime('created_at', { mode: 'date', fsp: 3 }).notNull(),
+}, (table) => [
+  index('idx_xp_user_source_time').on(table.userId, table.source, table.createdAt),
+]);
+
+export const checkins = mysqlTable('checkins', {
+  userId: bigint('user_id', { mode: 'number', unsigned: true }).notNull(),
+  checkinDate: date('checkin_date', { mode: 'string' }).notNull(),
+  createdAt: datetime('created_at', { mode: 'date', fsp: 3 }).notNull(),
+}, (table) => [
+  uniqueIndex('uk_checkins_user_date').on(table.userId, table.checkinDate),
+  index('idx_checkins_date').on(table.checkinDate),
+]);
+
+export const userFollows = mysqlTable('user_follows', {
+  followerId: bigint('follower_id', { mode: 'number', unsigned: true }).notNull(),
+  followeeId: bigint('followee_id', { mode: 'number', unsigned: true }).notNull(),
+  createdAt: datetime('created_at', { mode: 'date', fsp: 3 }).notNull(),
+}, (table) => [
+  uniqueIndex('uk_user_follows').on(table.followerId, table.followeeId),
+  index('idx_user_follows_followee').on(table.followeeId, table.createdAt),
+]);
+
+export const titles = mysqlTable('titles', {
+  id: int('id', { unsigned: true }).autoincrement().primaryKey(),
+  slug: varchar('slug', { length: 64 }).notNull(),
+  name: varchar('name', { length: 32 }).notNull(),
+  description: varchar('description', { length: 255 }).notNull().default(''),
+  icon: varchar('icon', { length: 4 }).notNull().default('雅'),
+  minLevel: int('min_level').notNull().default(1),
+  sortOrder: int('sort_order').notNull().default(0),
+}, (table) => [
+  uniqueIndex('uk_titles_slug').on(table.slug),
+]);
+
+export const userTitles = mysqlTable('user_titles', {
+  userId: bigint('user_id', { mode: 'number', unsigned: true }).notNull(),
+  titleId: int('title_id', { unsigned: true }).notNull(),
+  acquiredAt: datetime('acquired_at', { mode: 'date', fsp: 3 }).notNull(),
+}, (table) => [
+  uniqueIndex('uk_user_titles').on(table.userId, table.titleId),
+]);
+
+export const achievements = mysqlTable('achievements', {
+  id: int('id', { unsigned: true }).autoincrement().primaryKey(),
+  slug: varchar('slug', { length: 64 }).notNull(),
+  name: varchar('name', { length: 32 }).notNull(),
+  description: varchar('description', { length: 255 }).notNull().default(''),
+  icon: varchar('icon', { length: 4 }).notNull().default('成'),
+  conditionType: varchar('condition_type', { length: 32 }).notNull(),
+  threshold: int('threshold').notNull(),
+  sortOrder: int('sort_order').notNull().default(0),
+}, (table) => [
+  uniqueIndex('uk_achievements_slug').on(table.slug),
+]);
+
+export const userAchievements = mysqlTable('user_achievements', {
+  userId: bigint('user_id', { mode: 'number', unsigned: true }).notNull(),
+  achievementId: int('achievement_id', { unsigned: true }).notNull(),
+  unlockedAt: datetime('unlocked_at', { mode: 'date', fsp: 3 }).notNull(),
+}, (table) => [
+  uniqueIndex('uk_user_achievements').on(table.userId, table.achievementId),
 ]);
 
 export type User = typeof users.$inferSelect;

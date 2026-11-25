@@ -1,13 +1,16 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api } from '../api';
+import { useAuth } from '../auth';
 import { formatTime } from '../format';
 import type { Bar, ThreadSummary } from '../types';
 
 export function BarPage() {
   const { slug = '' } = useParams();
+  const { user } = useAuth();
   const [bar, setBar] = useState<Bar | null>(null);
   const [threads, setThreads] = useState<ThreadSummary[]>([]);
+  const [following, setFollowing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -19,12 +22,20 @@ export function BarPage() {
     ])
       .then(([barData, threadData]) => {
         setBar(barData.bar);
+        setFollowing(Boolean(barData.bar.isFollowing));
         setThreads(threadData.items);
         setError('');
       })
       .catch(() => setError('这个吧不存在，或者 API 服务没启动'))
       .finally(() => setLoading(false));
   }, [slug]);
+
+  async function toggleFollow() {
+    if (!user) return;
+    const data = await api.post<{ following: boolean; memberCount: number }>(`/api/bars/${slug}/follow`, {});
+    setFollowing(data.following);
+    setBar((current) => current ? { ...current, memberCount: data.memberCount } : current);
+  }
 
   if (loading) return <p className="muted">加载中…</p>;
   if (error) return <p className="notice error">{error}</p>;
@@ -44,7 +55,16 @@ export function BarPage() {
             <span><strong>{bar.memberCount}</strong> 关注</span>
           </div>
         </div>
-        <Link className="btn primary" to={`/b/${bar.slug}/new`}>发主题</Link>
+        <div className="bar-hero-actions">
+          {user ? (
+            <button className={`btn ${following ? 'ghost' : 'primary'} sm`} onClick={toggleFollow}>
+              {following ? '已关注' : '关注此吧'}
+            </button>
+          ) : (
+            <Link className="btn ghost sm" to="/login">登录后关注</Link>
+          )}
+          <Link className="btn primary sm" to={`/b/${bar.slug}/new`}>发主题</Link>
+        </div>
         <span className="bar-hero-seal">谈</span>
       </section>
 

@@ -23,7 +23,10 @@ export function BarsPage() {
           <h1>所有吧</h1>
           <p className="muted">选一个吧进去发帖；没有合适的，先在站务反馈里提。</p>
         </div>
-        <span className="page-head-seal">集</span>
+        <div className="page-head-actions">
+          <Link className="btn primary sm" to="/create-bar">创建一个吧</Link>
+          <span className="page-head-seal">集</span>
+        </div>
       </div>
 
       {error && <p className="notice error">{error}</p>}

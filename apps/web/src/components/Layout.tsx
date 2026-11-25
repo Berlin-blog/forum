@@ -1,6 +1,7 @@
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth';
 import { Atmosphere, ScrollProgress } from './Atmosphere';
+import { LevelBadge, NotificationBell } from './Growth';
 
 const siteName = window.__FORUM_CONFIG__?.siteName ?? '论坛';
 
@@ -38,8 +39,10 @@ export function Layout() {
           <div className="topbar-user">
             {user ? (
               <>
+                <NotificationBell />
                 <Link className="user-chip" to={`/u/${user.username}`}>
                   <span className="user-dot">{user.displayName.slice(0, 1)}</span>
+                  <LevelBadge level={user.level} compact />
                   <span>{user.displayName}</span>
                 </Link>
                 <button className="btn ghost sm" onClick={handleLogout}>退出</button>
@@ -64,7 +67,7 @@ export function Layout() {
             <span className="footer-seal">雅</span>
             <span>{siteName} · 东方雅集</span>
           </div>
-          <span className="footer-note">零成本个人项目 · 内容由用户发布 · 清谈为主，雅俗共赏</span>
+          <span className="footer-note">内容由用户发布 · 清谈为主，雅俗共赏</span>
         </div>
       </footer>
     </div>

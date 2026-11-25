@@ -42,7 +42,6 @@ export function HomePage() {
             <span className="hero-line">开始讨论。</span>
           </h1>
           <p className="hero-text">
-            自由注册，直接发帖，楼中楼不限层级。没有邀请码，也没有发帖前审核。
             清谈不论高低，雅俗皆可入席。
           </p>
           <div className="hero-actions">

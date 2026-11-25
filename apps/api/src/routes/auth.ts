@@ -5,6 +5,7 @@ import { db } from '../db/client';
 import { users } from '../db/schema';
 import { createSession, hashPassword, revokeSession, verifyPassword } from '../lib/auth';
 import { requireUser } from '../lib/guard';
+import { initializeProgress } from '../lib/progression';
 
 const registerSchema = z.object({
   username: z.string().trim().min(3).max(32).regex(/^[a-zA-Z0-9_\u4e00-\u9fa5-]+$/),
@@ -24,6 +25,9 @@ function publicUser(user: {
   avatarUrl: string | null;
   bio: string;
   userRole: string;
+  level: number;
+  exp: number;
+  equippedTitleId: number | null;
   createdAt: Date;
 }) {
   return {
@@ -33,6 +37,9 @@ function publicUser(user: {
     avatarUrl: user.avatarUrl,
     bio: user.bio,
     userRole: user.userRole,
+    level: user.level,
+    exp: user.exp,
+    equippedTitleId: user.equippedTitleId,
     createdAt: user.createdAt,
   };
 }
@@ -55,12 +62,16 @@ const authRoutes: FastifyPluginAsync = async (app) => {
     }
 
     const passwordHash = await hashPassword(password);
-    const [created] = await db.insert(users).values([{
-      username,
-      passwordHash,
-      displayName,
-      createdAt: new Date(),
-    }]).$returningId();
+    const created = await db.transaction(async (tx) => {
+      const [row] = await tx.insert(users).values([{
+        username,
+        passwordHash,
+        displayName,
+        createdAt: new Date(),
+      }]).$returningId();
+      await initializeProgress(tx, row.id);
+      return row;
+    });
 
     const [user] = await db.select().from(users).where(eq(users.id, created.id)).limit(1);
     const token = await createSession(created.id);

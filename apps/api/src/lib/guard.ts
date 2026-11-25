@@ -22,3 +22,11 @@ export async function requireUser(
   request.token = token;
   return user;
 }
+
+export async function optionalUser(request: FastifyRequest): Promise<AuthUser | null> {
+  const header = request.headers.authorization;
+  if (!header?.startsWith('Bearer ')) return null;
+  const user = await getSessionUser(header.slice('Bearer '.length).trim());
+  if (user) request.user = user;
+  return user;
+}

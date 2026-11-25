@@ -6,6 +6,7 @@ import { db } from '../db/client';
 import { bars, posts, threads, users } from '../db/schema';
 import { renderContent } from '../lib/content';
 import { requireUser } from '../lib/guard';
+import { awardXp } from '../lib/progression';
 
 const createThreadSchema = z.object({
   barSlug: z.string().trim().min(1).max(64),
@@ -112,6 +113,8 @@ const threadsRoutes: FastifyPluginAsync = async (app) => {
         postCount: sql`post_count + 1`,
         lastThreadId: thread.id,
       }).where(eq(bars.id, bar.id));
+
+      await awardXp(tx, user.id, 'thread');
 
       return thread;
     });

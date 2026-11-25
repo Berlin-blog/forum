@@ -2,9 +2,10 @@ import type { FastifyPluginAsync } from 'fastify';
 import { and, asc, eq, isNull, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '../db/client';
-import { bars, posts, reactions, threads, users } from '../db/schema';
+import { bars, notifications, posts, reactions, threads, users } from '../db/schema';
 import { renderContent } from '../lib/content';
 import { requireUser } from '../lib/guard';
+import { awardXp } from '../lib/progression';
 
 const replySchema = z.object({
   content: z.string().trim().min(1).max(50_000),
@@ -110,6 +111,21 @@ const postsRoutes: FastifyPluginAsync = async (app) => {
         postCount: sql`post_count + 1`,
       }).where(eq(bars.id, thread.barId));
 
+      await awardXp(tx, user.id, 'reply');
+
+      if (thread.authorId !== user.id) {
+        await tx.insert(notifications).values([{
+          userId: thread.authorId,
+          notificationType: 'reply',
+          actorId: user.id,
+          threadId,
+          postId: post.id,
+          payload: { title: thread.title },
+          createdAt: new Date(),
+        }]);
+        await awardXp(tx, thread.authorId, 'received_reply');
+      }
+
       return post;
     }).catch((error: Error) => {
       if (error.message === 'THREAD_NOT_FOUND') {
@@ -184,6 +200,25 @@ const postsRoutes: FastifyPluginAsync = async (app) => {
       await tx.update(bars).set({
         postCount: sql`post_count + 1`,
       }).where(eq(bars.id, thread.barId));
+
+      await awardXp(tx, user.id, 'reply');
+
+      const recipients = new Set<number>();
+      if (parent.authorId !== user.id) recipients.add(parent.authorId);
+      if (thread.authorId !== user.id) recipients.add(thread.authorId);
+
+      for (const recipient of recipients) {
+        await tx.insert(notifications).values([{
+          userId: recipient,
+          notificationType: 'reply',
+          actorId: user.id,
+          threadId: parent.threadId,
+          postId: post.id,
+          payload: { title: thread.title },
+          createdAt: new Date(),
+        }]);
+        await awardXp(tx, recipient, 'received_reply');
+      }
 
       return post;
     }).catch((error: Error) => {

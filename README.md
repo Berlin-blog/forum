@@ -15,6 +15,10 @@
 
 ![登录页](docs/screenshots/login.png)
 
+![个人主页](docs/screenshots/profile.png)
+
+![通知](docs/screenshots/notifications.png)
+
 ---
 
 ## 当前地址
@@ -99,11 +103,11 @@ ngrok http 3002 --url https://promotion-surpass-jazz.ngrok-free.dev
 forum/
 ├── apps/
 │   ├── api/                 # Fastify + MySQL
-│   │   ├── migrations/      # 0001_init.sql
+│   │   ├── migrations/      # 0001_init.sql / 0002_social_growth.sql
 │   │   └── src/
-│   │       ├── routes/      # auth / bars / threads / posts / users
+│   │       ├── routes/      # auth / bars / threads / posts / users / me / notifications
 │   │       ├── db/          # schema / client / migrate
-│   │       └── lib/         # auth / guard / content
+│   │       └── lib/         # auth / guard / content / progression
 │   └── web/                 # Vite + React
 │       ├── public/config.js # 运行时 API 地址
 │       └── src/
@@ -121,25 +125,56 @@ forum/
 - 用户名 + 密码注册 / 登录 / 退出
 - Bearer token 会话（数据库存 SHA-256 哈希）
 - 吧列表、分类、吧主页
+- **用户创建吧**：创建者自动成为吧主
+- 关注 / 取消关注吧
 - 发主题、主题列表、主题详情
 - 顶层回复
 - **无限层楼中楼**：`parent_id` 自关联，前端逐层展开
 - 点赞帖子
-- 个人主页
+- **个人主页**：等级、称号、粉丝/关注、关注的吧、主题、回复、成就
+- **关注用户 / 粉丝**
+- **通知中心**：被回复、升级、被关注
+- **1–20 级经验系统**：发帖、回复、被回复、签到获取经验，每日上限
+- **签到**：每日一次
+- **称号**：按等级解锁，可佩戴 / 卸下
+- **成就**：主题数、回复数、粉丝数、等级、签到、获赞等条件自动解锁
 - 管理员事后处理接口（举报、封禁、隐藏主题 / 帖子）
 - Markdown 渲染 + HTML 清洗
 - 中文 FULLTEXT ngram 搜索索引（API 搜索接口待接）
 - GitHub Pages 部署 workflow
 
+## 成长系统
+
+| 行为 | 经验 | 每日上限 |
+|---|---:|---:|
+| 发主题 | +5 | 15 |
+| 发回复 / 楼中楼 | +3 | 15 |
+| 被回复 | +2 | 10 |
+| 签到 | +5 | 5 |
+
+等级门槛（累计经验）：
+
+| 等级 | 累计经验 |
+|---|---:|
+| L1 → L2 | 10 |
+| L2 → L3 | 110 |
+| L3 → L4 | 310 |
+| L4 → L5 | 660 |
+| L5 → L6 | 1,160 |
+| L10 | 4,660 |
+| L15 | 12,410 |
+| L20 | 23,910 |
+
+称号按等级自动解锁：初入雅集 L1、煮茶客 L3、听雨人 L5、藏书家 L8、山中宰相 L12、雅集主人 L16、清谈传奇 L20。
+
 ## 未实现
 
 - 图片上传
-- 站内通知 UI
 - 举报 / 审核后台 UI
 - 搜索页面
-- 用户创建吧
 - 邮箱 / 找回密码
-- 管理后台页面
+- 完整管理后台页面
+- 粉丝 / 关注列表弹层
 
 ---
 
@@ -153,7 +188,10 @@ forum/
 | `POST` | `/api/auth/logout` | 退出 |
 | `GET` | `/api/me` | 当前用户 |
 | `GET` | `/api/bars` | 分类 + 吧 |
-| `GET` | `/api/bars/:slug` | 吧详情 |
+| `POST` | `/api/bars` | 用户创建吧 |
+| `GET` | `/api/bars/:slug` | 吧详情 / 是否关注 |
+| `POST` | `/api/bars/:slug/follow` | 关注 / 取消关注吧 |
+| `GET` | `/api/me/bars` | 我关注的吧 |
 | `GET` | `/api/threads?bar=&limit=&offset=` | 主题列表 |
 | `POST` | `/api/threads` | 发主题 |
 | `GET` | `/api/threads/:id` | 主题 + 首楼 |
@@ -162,13 +200,22 @@ forum/
 | `GET` | `/api/posts/:id/children` | 直接子回复 |
 | `POST` | `/api/posts/:id/replies` | 楼中楼回复（不限层级） |
 | `POST` | `/api/posts/:id/like` | 点赞 / 取消 |
+| `POST` | `/api/checkin` | 每日签到 |
+| `GET` | `/api/me/checkin` | 今日签到状态 |
+| `GET` | `/api/me/titles` | 我的称号 |
+| `POST` | `/api/me/title` | 佩戴 / 卸下称号 |
+| `PATCH` | `/api/me` | 修改资料 |
+| `GET` | `/api/notifications` | 通知列表 |
+| `GET` | `/api/notifications/unread-count` | 未读数 |
+| `POST` | `/api/notifications/read` | 全部已读 |
 | `POST` | `/api/reports` | 提交举报 |
 | `GET` | `/api/admin/reports` | 管理员：举报列表 |
 | `POST` | `/api/admin/reports/:id/resolve` | 管理员：处理举报 |
 | `POST` | `/api/admin/users/:id/sanction` | 管理员：封禁 / 解封 |
 | `POST` | `/api/admin/threads/:id/hide` | 管理员：隐藏 / 恢复主题 |
 | `POST` | `/api/admin/posts/:id/hide` | 管理员：隐藏 / 恢复帖子 |
-| `GET` | `/api/users/:username` | 用户主页 |
+| `GET` | `/api/users/:username` | 用户主页（统计 / 关注吧 / 主题 / 回复 / 称号 / 成就） |
+| `POST` | `/api/users/:username/follow` | 关注 / 取消关注用户 |
 
 认证：
 
@@ -185,7 +232,7 @@ Authorization: Bearer <token>
 - `posts.parent_id` 自关联，无 `depth` 限制
 - 顶层楼层 `floor` 唯一；楼中楼 `floor = NULL`
 - `threads` / `posts` 有 FULLTEXT ngram 索引
-- 迁移文件：[apps/api/migrations/0001_init.sql](apps/api/migrations/0001_init.sql)
+- 迁移文件：[0001_init.sql](apps/api/migrations/0001_init.sql)、[0002_social_growth.sql](apps/api/migrations/0002_social_growth.sql)
 
 ---
 
