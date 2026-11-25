@@ -1588,6 +1588,10 @@ img { max-width: 100%; }
 .follow-row .btn { flex: 0 0 auto; }
 .follow-row { padding: 8px 2px; }
 
+.leaderboard-tabs { margin-bottom: 22px; }
+.leaderboard-note { margin-top: 16px; text-align: center; }
+.limit-badge { flex: 0 0 auto; display: inline-block; margin-left: 4px; padding: 0 5px; border: 1px solid rgba(158, 59, 50, 0.35); color: var(--seal); font-size: 9px; letter-spacing: 0.08em; vertical-align: middle; }
+
 /* ---------- utilities ---------- */
 
 .muted { color: var(--muted); }
@@ -1680,6 +1684,11 @@ img { max-width: 100%; }
   .nav a[href="#/settings"] { font-size: 0; padding-left: 6px; padding-right: 6px; }
   .nav a[href="#/settings"]::before { content: '设'; font-size: 13px; letter-spacing: 0; }
   .follow-modal { max-height: 82vh; padding: 18px; }
+  .settings-card { padding: 4px 16px; }
+  .settings-row { align-items: flex-start; gap: 14px; padding: 17px 0; }
+  .settings-foot { align-items: flex-start; flex-direction: column; }
+  .leaderboard-tabs { margin-bottom: 16px; }
+  .title-wall-card { min-height: 0; }
   .section { margin-top: 46px; }
   .section-head { align-items: flex-end; }
   .section-head h2 { font-size: 22px; }

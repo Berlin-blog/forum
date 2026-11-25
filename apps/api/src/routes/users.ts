@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from 'fastify';
-import { and, asc, desc, eq, inArray, isNotNull, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
 import { db } from '../db/client';
 import {
   achievements,
@@ -117,9 +117,13 @@ const usersRoutes: FastifyPluginAsync = async (app) => {
         description: titles.description,
         icon: titles.icon,
         minLevel: titles.minLevel,
+        expiresAt: userTitles.expiresAt,
       }).from(userTitles)
         .innerJoin(titles, eq(titles.id, userTitles.titleId))
-        .where(eq(userTitles.userId, user.id))
+        .where(and(
+          eq(userTitles.userId, user.id),
+          or(isNull(userTitles.expiresAt), gt(userTitles.expiresAt, new Date())),
+        ))
         .orderBy(asc(titles.minLevel)),
       db.select({
         id: achievements.id,
@@ -143,7 +147,15 @@ const usersRoutes: FastifyPluginAsync = async (app) => {
         description: titles.description,
         icon: titles.icon,
         minLevel: titles.minLevel,
-      }).from(titles).where(eq(titles.id, user.equippedTitleId)).limit(1);
+        expiresAt: userTitles.expiresAt,
+      }).from(userTitles)
+        .innerJoin(titles, eq(titles.id, userTitles.titleId))
+        .where(and(
+          eq(userTitles.userId, user.id),
+          eq(userTitles.titleId, user.equippedTitleId),
+          or(isNull(userTitles.expiresAt), gt(userTitles.expiresAt, new Date())),
+        ))
+        .limit(1);
       equippedTitle = title ?? null;
     }
 

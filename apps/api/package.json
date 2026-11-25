@@ -8,7 +8,10 @@
     "build": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
     "db:migrate": "tsx src/db/migrate.ts",
-    "db:sync-growth": "tsx src/db/sync-growth.ts"
+    "db:sync-growth": "tsx src/db/sync-growth.ts",
+    "db:seed-bot": "tsx src/db/seed-bot.ts",
+    "bot:run": "tsx src/db/run-hot-bot.ts",
+    "weekly:settle": "tsx src/db/settle-weekly.ts"
   },
   "dependencies": {
     "@fastify/cors": "^11.4.3",

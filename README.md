@@ -79,6 +79,24 @@ pnpm --filter api db:migrate
 pnpm --filter api db:sync-growth
 ```
 
+首次使用热点机器人时创建账户：
+
+```powershell
+pnpm --filter api db:seed-bot
+```
+
+机器人每 2 小时最多发 1 条，服务启动后自动运行；手动跑一次：
+
+```powershell
+pnpm --filter api bot:run
+```
+
+手动结算上一周：
+
+```powershell
+pnpm --filter api weekly:settle
+```
+
 ### 4. 启动 API
 
 ```powershell
@@ -155,10 +173,13 @@ forum/
 - **通知中心**：被回复、升级、被关注；点击单条即标记已读，25–30 秒轮询刷新
 - **1–20 级经验系统**：发帖、回复、被回复、签到获取经验，每日上限已提高
 - **签到**：每日一次
-- **称号**：43 个称号，等级解锁 + 行为条件解锁，可佩戴 / 卸下
+- **称号**：46 个称号，等级解锁 + 行为条件解锁 + 周榜限时称号，可佩戴 / 卸下
 - **称号墙**：查看全部称号与解锁条件
 - **成就**：16 个成就，独立成就墙
-- **等级榜**：按等级与经验排序
+- **等级榜**：按等级与经验排序；demo、管理员、机器人不参与排名
+- **本周榜**：按当周经验排序，每周一结算
+- **每周限时称号**：周榜前三获得 7 天称号
+- **热点机器人**：每 2 小时最多自动发 1 条热点，自动匹配吧，去重
 - **每日任务**：签到、发帖、回复、收到回复四个进度
 - **设置页**：楼中楼自动展开、夜间模式、减少动效、通知轮询开关
 - **吧主后台**：吧规、小吧主、成员管理
@@ -172,6 +193,7 @@ forum/
 - 首页只请求一个聚合接口 `/api/home`，不再串行请求吧列表 + 主题 + 任务
 - 减少粒子数量、移除 reveal 的模糊滤镜、移动端关闭金尘并启用 `content-visibility`
 - 图片上传后压缩为 WebP 并内嵌到内容，避免 ngrok 免费版插页挡住图片；原文件同时保存在 `uploads/`
+- 手机端适配：设置、周榜、称号墙、吧主后台都做了响应式，导航在小屏收成单字入口
 
 ## 成长系统
 
@@ -198,6 +220,18 @@ forum/
 称号按等级自动解锁，包含古典称号与新趣味称号：初入雅集、扫花人、煮茶客、问茶客、听雨人、观云者、藏书家、藏锋、知味、山中宰相、半隐、雅集主人、摘星、清谈传奇；以及新席客、气氛组组长、深夜茶客、课代表、人间观察员、赛博隐士、考古学家、楼中楼建筑师、电子包浆、赛博说书人、人间清醒、赛博陶渊明、互联网嘴替、键盘侠克星、电子古董、赛博菩萨、清谈区UP主、时间管理大师、人间值得、赛博庄子。
 
 额外还有 9 个行为条件称号：开吧元老、一吧之主、百帖斩、楼中楼之王、万人迷、点赞收割机、签到仙人、标题制造机、深夜不睡。称号墙 `/titles` 可查看全部与解锁条件。
+
+每周结算还会给本周经验榜前三名发放 7 天限时称号：本周魁首、本周亚席、本周季席。demo、管理员、热点机器人不参与排行榜，也不会获得周榜称号。
+
+## 热点机器人与周榜
+
+- 机器人账户：`hotbot` / 显示名「热点播报」
+- 数据源：百度热搜公开页面；按关键词匹配到对应吧
+- 每 2 小时最多发 **1 条**，服务重启也会读取上次发帖时间，不重复轰炸
+- `hot_topic_posts.fingerprint` 唯一索引去重，同一热点不会重复发
+- demo、管理员、热点机器人从等级榜 / 周榜中排除
+- 每周结算上一周经验榜，前三名获得 7 天限时称号
+- 限时称号过期后自动从主页和称号墙消失
 
 ## 未实现
 
@@ -256,6 +290,7 @@ forum/
 | `POST` | `/api/notifications/:id/read` | 单条已读 |
 | `GET` | `/api/me/daily-tasks` | 每日任务 |
 | `GET` | `/api/leaderboard` | 等级榜 |
+| `GET` | `/api/leaderboard/weekly` | 本周经验榜 |
 | `GET` | `/api/achievements` | 成就墙（含解锁状态） |
 | `POST` | `/api/reports` | 提交举报 |
 | `GET` | `/api/admin/reports` | 管理员：举报列表 |
@@ -283,7 +318,7 @@ Authorization: Bearer <token>
 - `posts.parent_id` 自关联，无 `depth` 限制
 - 顶层楼层 `floor` 唯一；楼中楼 `floor = NULL`
 - `threads` / `posts` 有 FULLTEXT ngram 索引
-- 迁移文件：[0001_init.sql](apps/api/migrations/0001_init.sql)、[0002_social_growth.sql](apps/api/migrations/0002_social_growth.sql)、[0003_more_growth.sql](apps/api/migrations/0003_more_growth.sql)、[0004_attachments.sql](apps/api/migrations/0004_attachments.sql)
+- 迁移文件：[0001_init.sql](apps/api/migrations/0001_init.sql)、[0002_social_growth.sql](apps/api/migrations/0002_social_growth.sql)、[0003_more_growth.sql](apps/api/migrations/0003_more_growth.sql)、[0004_attachments.sql](apps/api/migrations/0004_attachments.sql)、[0005_more_titles.sql](apps/api/migrations/0005_more_titles.sql)、[0006_conditional_titles.sql](apps/api/migrations/0006_conditional_titles.sql)、[0007_bot_and_weekly.sql](apps/api/migrations/0007_bot_and_weekly.sql)、[0008_bot_role.sql](apps/api/migrations/0008_bot_role.sql)
 
 ---
 

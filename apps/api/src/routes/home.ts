@@ -3,6 +3,7 @@ import { and, desc, eq, sql } from 'drizzle-orm';
 import { db } from '../db/client';
 import { bars, categories, threads, titles, users } from '../db/schema';
 import { optionalUser } from '../lib/guard';
+import { leaderboardEligibility } from '../lib/weekly';
 import { getDailyTasks, progressForExp } from '../lib/progression';
 
 async function categoryRows() {
@@ -51,7 +52,7 @@ async function leaderboard(limit: number) {
     })
     .from(users)
     .leftJoin(titles, eq(titles.id, users.equippedTitleId))
-    .where(eq(users.status, 'active'))
+    .where(leaderboardEligibility())
     .orderBy(desc(users.level), desc(users.exp))
     .limit(limit);
 

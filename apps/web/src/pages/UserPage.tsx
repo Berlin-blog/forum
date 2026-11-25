@@ -255,6 +255,7 @@ export function ProfilePage() {
                       <strong>{title.name}</strong>
                       <p>{title.description}</p>
                     </div>
+                    {title.expiresAt && <span className="limit-badge">限时</span>}
                     {profile.isSelf && (
                       <button className="link-btn" onClick={() => equipTitle(profileUser.equippedTitleId === title.id ? null : title.id)}>
                         {profileUser.equippedTitleId === title.id ? '卸下' : '佩戴'}

@@ -243,6 +243,7 @@ export const userTitles = mysqlTable('user_titles', {
   userId: bigint('user_id', { mode: 'number', unsigned: true }).notNull(),
   titleId: int('title_id', { unsigned: true }).notNull(),
   acquiredAt: datetime('acquired_at', { mode: 'date', fsp: 3 }).notNull(),
+  expiresAt: datetime('expires_at', { mode: 'date', fsp: 3 }),
 }, (table) => [
   uniqueIndex('uk_user_titles').on(table.userId, table.titleId),
 ]);
@@ -282,6 +283,26 @@ export const attachments = mysqlTable('attachments', {
   uniqueIndex('uk_attachments_object_key').on(table.objectKey),
   index('idx_attachments_post').on(table.postId),
 ]);
+
+export const hotTopicPosts = mysqlTable('hot_topic_posts', {
+  id: bigint('id', { mode: 'number', unsigned: true }).autoincrement().primaryKey(),
+  fingerprint: char('fingerprint', { length: 64 }).notNull(),
+  source: varchar('source', { length: 64 }).notNull(),
+  title: varchar('title', { length: 255 }).notNull(),
+  url: varchar('url', { length: 1024 }).notNull(),
+  barId: bigint('bar_id', { mode: 'number', unsigned: true }).notNull(),
+  threadId: bigint('thread_id', { mode: 'number', unsigned: true }).notNull(),
+  createdAt: datetime('created_at', { mode: 'date', fsp: 3 }).notNull(),
+}, (table) => [
+  uniqueIndex('uk_hot_topic_fingerprint').on(table.fingerprint),
+  index('idx_hot_topic_thread').on(table.threadId),
+]);
+
+export const weeklySettlements = mysqlTable('weekly_settlements', {
+  weekStart: date('week_start', { mode: 'string' }).primaryKey(),
+  winners: json('winners').$type<Array<{ userId: number; rank: number; exp: number }>>().notNull(),
+  settledAt: datetime('settled_at', { mode: 'date', fsp: 3 }).notNull(),
+});
 
 export type User = typeof users.$inferSelect;
 export type Bar = typeof bars.$inferSelect;

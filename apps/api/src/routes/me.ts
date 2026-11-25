@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from 'fastify';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, gt, isNull, or } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '../db/client';
 import { checkins, titles, userTitles, users } from '../db/schema';
@@ -63,10 +63,14 @@ const meRoutes: FastifyPluginAsync = async (app) => {
         icon: titles.icon,
         minLevel: titles.minLevel,
         acquiredAt: userTitles.acquiredAt,
+        expiresAt: userTitles.expiresAt,
       })
       .from(userTitles)
       .innerJoin(titles, eq(titles.id, userTitles.titleId))
-      .where(eq(userTitles.userId, user.id))
+      .where(and(
+        eq(userTitles.userId, user.id),
+        or(isNull(userTitles.expiresAt), gt(userTitles.expiresAt, new Date())),
+      ))
       .orderBy(titles.minLevel);
 
     const [me] = await db.select({ equippedTitleId: users.equippedTitleId }).from(users).where(eq(users.id, user.id)).limit(1);
@@ -88,7 +92,11 @@ const meRoutes: FastifyPluginAsync = async (app) => {
       const [owned] = await db
         .select({ titleId: userTitles.titleId })
         .from(userTitles)
-        .where(and(eq(userTitles.userId, user.id), eq(userTitles.titleId, parsed.data.titleId)))
+        .where(and(
+          eq(userTitles.userId, user.id),
+          eq(userTitles.titleId, parsed.data.titleId),
+          or(isNull(userTitles.expiresAt), gt(userTitles.expiresAt, new Date())),
+        ))
         .limit(1);
       if (!owned) {
         return reply.code(403).send({ error: { code: 'TITLE_NOT_OWNED', message: '还没有获得这个称号' } });

@@ -12,6 +12,7 @@ import achievementsRoutes from './routes/achievements';
 import adminRoutes from './routes/admin';
 import barsRoutes from './routes/bars';
 import homeRoutes from './routes/home';
+import leaderboardRoutes from './routes/leaderboard';
 import meRoutes from './routes/me';
 import notificationsRoutes from './routes/notifications';
 import postsRoutes from './routes/posts';
@@ -21,6 +22,8 @@ import titlesRoutes from './routes/titles';
 import uploadsRoutes from './routes/uploads';
 import usersRoutes from './routes/users';
 import { uploadsDir } from './lib/paths';
+import { startHotBotScheduler } from './lib/hot-bot';
+import { startWeeklyScheduler } from './lib/weekly';
 
 const app = Fastify({
   logger: true,
@@ -83,6 +86,7 @@ await app.register(achievementsRoutes);
 await app.register(adminRoutes);
 await app.register(barsRoutes);
 await app.register(homeRoutes);
+await app.register(leaderboardRoutes);
 await app.register(meRoutes);
 await app.register(notificationsRoutes);
 await app.register(searchRoutes);
@@ -102,6 +106,11 @@ app.setErrorHandler((error, request, reply) => {
 
 const port = Number(process.env.PORT ?? 3002);
 await app.listen({ port, host: '127.0.0.1' });
+
+if (process.env.HOT_BOT_ENABLED !== 'false') {
+  startHotBotScheduler();
+}
+startWeeklyScheduler();
 
 async function shutdown() {
   await app.close();

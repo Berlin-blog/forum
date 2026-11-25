@@ -14,6 +14,7 @@ type TitleItem = {
   conditionThreshold: number | null;
   unlocked: boolean;
   acquiredAt: string | null;
+  expiresAt: string | null;
 };
 
 const conditionLabels: Record<string, string> = {
@@ -25,6 +26,7 @@ const conditionLabels: Record<string, string> = {
   checkins: '签到',
   threads: '主题',
   night_posts: '深夜发帖',
+  weekly_rank: '周榜排名',
 };
 
 export function TitlesPage() {
@@ -70,7 +72,7 @@ export function TitlesPage() {
                 <p>{item.description}</p>
                 <span className="muted small">
                   {item.unlocked
-                    ? '已解锁'
+                    ? item.expiresAt ? '已解锁 · 限时称号' : '已解锁'
                     : item.conditionType
                       ? `${conditionLabels[item.conditionType] ?? item.conditionType} ≥ ${item.conditionThreshold}`
                       : `Lv.${item.minLevel} 解锁`}

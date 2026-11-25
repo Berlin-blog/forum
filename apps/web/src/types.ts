@@ -99,6 +99,7 @@ export type Title = {
   description: string;
   icon: string;
   minLevel: number;
+  expiresAt?: string | null;
 };
 
 export type Achievement = {
