@@ -9,6 +9,7 @@ export type User = {
   exp: number;
   equippedTitleId: number | null;
   createdAt: string;
+  lastSeenAt?: string | null;
 };
 
 export type Bar = {
@@ -48,6 +49,7 @@ export type ThreadSummary = {
   createdAt: string;
   authorName: string;
   authorUsername: string;
+  authorRole?: string;
   barSlug: string;
   barName: string;
 };
@@ -66,6 +68,7 @@ export type ThreadDetail = {
   authorId: number;
   authorName: string;
   authorUsername: string;
+  authorRole?: string;
 };
 
 export type Post = {
@@ -75,12 +78,16 @@ export type Post = {
   floor: number | null;
   contentHtml: string;
   contentMd: string;
+  contentText: string;
   createdAt: string;
   editedAt: string | null;
   childCount: number;
+  likeCount: number;
+  liked: boolean;
   authorId: number;
   authorName: string;
   authorUsername: string;
+  authorRole?: string;
   avatarUrl: string | null;
 };
 
@@ -88,8 +95,11 @@ export type FirstPost = {
   id: number;
   contentHtml: string;
   contentMd: string;
+  contentText: string;
   createdAt: string;
   editedAt: string | null;
+  likeCount: number;
+  liked: boolean;
 };
 
 export type Title = {
@@ -137,6 +147,7 @@ export type UserProfile = {
     id: number;
     title: string;
     replyCount: number;
+    isPinned?: boolean;
     lastPostAt: string;
     barSlug: string;
     barName: string;

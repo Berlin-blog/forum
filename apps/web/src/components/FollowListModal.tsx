@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../auth';
@@ -27,6 +27,36 @@ export function FollowListModal({ username, mode, onClose }: Props) {
   const [items, setItems] = useState<FollowUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<number | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const previous = document.activeElement as HTMLElement | null;
+    const dialog = dialogRef.current;
+    dialog?.focus();
+    function onKey(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        onClose();
+        return;
+      }
+      if (event.key !== 'Tab' || !dialog) return;
+      const focusable = dialog.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), input, textarea, [tabindex]:not([tabindex="-1"])');
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      previous?.focus();
+    };
+  }, [onClose]);
 
   useEffect(() => {
     api.get<{ items: FollowUser[] }>(`/api/users/${encodeURIComponent(username)}/${mode}`)
@@ -52,13 +82,21 @@ export function FollowListModal({ username, mode, onClose }: Props) {
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="follow-modal" onClick={(event) => event.stopPropagation()}>
+      <div
+        className="follow-modal"
+        ref={dialogRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="follow-modal-title"
+        onClick={(event) => event.stopPropagation()}
+      >
         <div className="follow-modal-head">
           <div>
             <span className="eyebrow">{mode === 'followers' ? '粉丝' : '关注'}</span>
-            <h2>{mode === 'followers' ? '粉丝列表' : '关注列表'}</h2>
+            <h2 id="follow-modal-title">{mode === 'followers' ? '粉丝列表' : '关注列表'}</h2>
           </div>
-          <button className="modal-close" onClick={onClose}>×</button>
+          <button className="modal-close" onClick={onClose} aria-label="关闭">×</button>
         </div>
 
         {loading ? <p className="muted">加载中…</p> : items.length === 0 ? (

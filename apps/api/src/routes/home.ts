@@ -76,6 +76,7 @@ const homeRoutes: FastifyPluginAsync = async (app) => {
         createdAt: threads.createdAt,
         authorName: users.displayName,
         authorUsername: users.username,
+        authorRole: users.userRole,
         barSlug: bars.slug,
         barName: bars.name,
       }).from(threads)
@@ -95,6 +96,7 @@ const homeRoutes: FastifyPluginAsync = async (app) => {
         createdAt: threads.createdAt,
         authorName: users.displayName,
         authorUsername: users.username,
+        authorRole: users.userRole,
         barSlug: bars.slug,
         barName: bars.name,
       }).from(threads)

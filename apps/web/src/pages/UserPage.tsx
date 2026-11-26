@@ -7,6 +7,8 @@ import { FollowListModal } from '../components/FollowListModal';
 import { formatTime } from '../format';
 import type { UserProfile } from '../types';
 
+type ProfileTab = 'threads' | 'replies' | 'titles' | 'achievements';
+
 export function ProfilePage() {
   const { username = '' } = useParams();
   const { user, refresh } = useAuth();
@@ -19,6 +21,7 @@ export function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
   const [followMode, setFollowMode] = useState<'followers' | 'following' | null>(null);
+  const [tab, setTab] = useState<ProfileTab>('threads');
 
   async function load() {
     const data = await api.get<UserProfile>(`/api/users/${encodeURIComponent(username)}`);
@@ -92,6 +95,14 @@ export function ProfilePage() {
   if (!profile) return null;
 
   const { user: profileUser, stats } = profile;
+  const pinnedThread = profile.threads.find((thread) => thread.isPinned);
+
+  const tabs: Array<[ProfileTab, string, number]> = [
+    ['threads', '主题', profile.threads.length],
+    ['replies', '回复', profile.replies.length],
+    ['titles', '称号', profile.titles.length],
+    ['achievements', '成就', profile.achievements.length],
+  ];
 
   return (
     <div className="profile-page">
@@ -108,8 +119,14 @@ export function ProfilePage() {
               </span>
             )}
           </div>
-          <p className="muted">@{profileUser.username} · {profileUser.userRole === 'admin' ? '管理员' : '成员'}</p>
+          <p className="muted">
+            @{profileUser.username} · {profileUser.userRole === 'admin' ? '管理员' : profileUser.userRole === 'bot' ? '机器人' : '成员'}
+          </p>
           <p className="profile-bio">{profileUser.bio || '这个人很懒，还没有写简介。'}</p>
+          <div className="profile-dates">
+            <span>加入于 {formatTime(profileUser.createdAt)}</span>
+            {profileUser.lastSeenAt && <span>最后活跃 {formatTime(profileUser.lastSeenAt)}</span>}
+          </div>
           <div className="profile-stats">
             <button className="stat-button" onClick={() => setFollowMode('followers')}><strong>{stats.followers}</strong> 粉丝</button>
             <button className="stat-button" onClick={() => setFollowMode('following')}><strong>{stats.following}</strong> 关注</button>
@@ -158,7 +175,133 @@ export function ProfilePage() {
         <div className="profile-main">
           {profile.isSelf && <CheckInButton />}
 
-          <section className="section profile-section" data-reveal>
+          <div className="search-tabs profile-tabs">
+            {tabs.map(([key, label, count]) => (
+              <button key={key} className={tab === key ? 'active' : ''} onClick={() => setTab(key)}>
+                {label} <span className="tab-count">{count}</span>
+              </button>
+            ))}
+          </div>
+
+          {tab === 'threads' && (
+            <section className="section profile-section" data-reveal>
+              <div className="section-head">
+                <div className="section-title-wrap">
+                  <span className="section-index">帖</span>
+                  <h2>最近主题</h2>
+                </div>
+              </div>
+              {profile.threads.length === 0 ? (
+                <p className="muted">还没有发布主题。</p>
+              ) : (
+                <div className="thread-list">
+                  {profile.threads.map((thread) => (
+                    <Link className="thread-row" key={thread.id} to={`/t/${thread.id}`}>
+                      <div className="thread-main">
+                        <div className="thread-title">
+                          {thread.isPinned && <span className="badge pinned">置顶</span>}
+                          {thread.title}
+                        </div>
+                        <div className="thread-meta">
+                          <span>{thread.barName}</span>
+                          <span>{formatTime(thread.lastPostAt)}</span>
+                        </div>
+                      </div>
+                      <div className="thread-stats">
+                        <strong>{thread.replyCount}</strong>
+                        <span>回复</span>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+
+          {tab === 'replies' && (
+            <section className="section profile-section" data-reveal>
+              <div className="section-head">
+                <div className="section-title-wrap">
+                  <span className="section-index">复</span>
+                  <h2>最近回复</h2>
+                </div>
+              </div>
+              {profile.replies.length === 0 ? (
+                <p className="muted">还没有回复内容。</p>
+              ) : (
+                <div className="reply-list">
+                  {profile.replies.map((reply) => (
+                    <Link className="reply-card" key={reply.id} to={`/t/${reply.threadId}`}>
+                      <p>{reply.contentText.slice(0, 120)}{reply.contentText.length > 120 ? '…' : ''}</p>
+                      <span className="muted small">{reply.barName} · {reply.threadTitle} · {formatTime(reply.createdAt)}</span>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+
+          {tab === 'titles' && (
+            <section className="section profile-section" data-reveal>
+              <div className="section-head">
+                <div className="section-title-wrap">
+                  <span className="section-index">号</span>
+                  <h2>称号</h2>
+                </div>
+                <Link className="section-link" to="/titles">全部 <span>→</span></Link>
+              </div>
+              {profile.titles.length === 0 ? (
+                <p className="muted">还没有获得称号。</p>
+              ) : (
+                <div className="title-list">
+                  {profile.titles.map((title) => (
+                    <div className={`title-row ${profileUser.equippedTitleId === title.id ? 'active' : ''}`} key={title.id}>
+                      <span className="title-icon">{title.icon}</span>
+                      <div>
+                        <strong>{title.name}</strong>
+                        <p>{title.description}</p>
+                      </div>
+                      {title.expiresAt && <span className="limit-badge">限时</span>}
+                      {profile.isSelf && (
+                        <button className="link-btn" onClick={() => equipTitle(profileUser.equippedTitleId === title.id ? null : title.id)}>
+                          {profileUser.equippedTitleId === title.id ? '卸下' : '佩戴'}
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+
+          {tab === 'achievements' && (
+            <section className="section profile-section" data-reveal>
+              <div className="section-head">
+                <div className="section-title-wrap">
+                  <span className="section-index">成</span>
+                  <h2>成就</h2>
+                </div>
+                <Link className="section-link" to="/achievements">全部 <span>→</span></Link>
+              </div>
+              {profile.achievements.length === 0 ? (
+                <p className="muted">还没有解锁成就。</p>
+              ) : (
+                <div className="achievement-grid profile-achievement-grid">
+                  {profile.achievements.map((achievement) => (
+                    <div className="achievement-card" key={achievement.id}>
+                      <span className="achievement-icon">{achievement.icon}</span>
+                      <strong>{achievement.name}</strong>
+                      <p>{achievement.description}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+        </div>
+
+        <aside className="profile-side">
+          <section className="panel profile-side-card" data-reveal>
             <div className="section-head">
               <div className="section-title-wrap">
                 <span className="section-index">吧</span>
@@ -183,110 +326,21 @@ export function ProfilePage() {
             )}
           </section>
 
-          <section className="section profile-section" data-reveal>
+          <section className="panel profile-side-card profile-dossier" data-reveal>
             <div className="section-head">
               <div className="section-title-wrap">
-                <span className="section-index">帖</span>
-                <h2>最近主题</h2>
+                <span className="section-index">档</span>
+                <h2>小档案</h2>
               </div>
             </div>
-            {profile.threads.length === 0 ? (
-              <p className="muted">还没有发布主题。</p>
-            ) : (
-              <div className="thread-list">
-                {profile.threads.map((thread) => (
-                  <Link className="thread-row" key={thread.id} to={`/t/${thread.id}`}>
-                    <div className="thread-main">
-                      <div className="thread-title">{thread.title}</div>
-                      <div className="thread-meta">
-                        <span>{thread.barName}</span>
-                        <span>{formatTime(thread.lastPostAt)}</span>
-                      </div>
-                    </div>
-                    <div className="thread-stats">
-                      <strong>{thread.replyCount}</strong>
-                      <span>回复</span>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </section>
-
-          <section className="section profile-section" data-reveal>
-            <div className="section-head">
-              <div className="section-title-wrap">
-                <span className="section-index">复</span>
-                <h2>最近回复</h2>
-              </div>
-            </div>
-            {profile.replies.length === 0 ? (
-              <p className="muted">还没有回复内容。</p>
-            ) : (
-              <div className="reply-list">
-                {profile.replies.map((reply) => (
-                  <Link className="reply-card" key={reply.id} to={`/t/${reply.threadId}`}>
-                    <p>{reply.contentText.slice(0, 120)}{reply.contentText.length > 120 ? '…' : ''}</p>
-                    <span className="muted small">{reply.barName} · {reply.threadTitle} · {formatTime(reply.createdAt)}</span>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </section>
-        </div>
-
-        <aside className="profile-side">
-          <section className="panel profile-side-card" data-reveal>
-            <div className="section-head">
-              <div className="section-title-wrap">
-                <span className="section-index">号</span>
-                <h2>称号</h2>
-              </div>
-              <Link className="section-link" to="/titles">全部 <span>→</span></Link>
-            </div>
-            {profile.titles.length === 0 ? (
-              <p className="muted">还没有获得称号。</p>
-            ) : (
-              <div className="title-list">
-                {profile.titles.map((title) => (
-                  <div className={`title-row ${profileUser.equippedTitleId === title.id ? 'active' : ''}`} key={title.id}>
-                    <span className="title-icon">{title.icon}</span>
-                    <div>
-                      <strong>{title.name}</strong>
-                      <p>{title.description}</p>
-                    </div>
-                    {title.expiresAt && <span className="limit-badge">限时</span>}
-                    {profile.isSelf && (
-                      <button className="link-btn" onClick={() => equipTitle(profileUser.equippedTitleId === title.id ? null : title.id)}>
-                        {profileUser.equippedTitleId === title.id ? '卸下' : '佩戴'}
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-
-          <section className="panel profile-side-card" data-reveal>
-            <div className="section-head">
-              <div className="section-title-wrap">
-                <span className="section-index">成</span>
-                <h2>成就</h2>
-              </div>
-              <Link className="section-link" to="/achievements">全部 <span>→</span></Link>
-            </div>
-            {profile.achievements.length === 0 ? (
-              <p className="muted">还没有解锁成就。</p>
-            ) : (
-              <div className="achievement-grid">
-                {profile.achievements.map((achievement) => (
-                  <div className="achievement-card" key={achievement.id}>
-                    <span className="achievement-icon">{achievement.icon}</span>
-                    <strong>{achievement.name}</strong>
-                    <p>{achievement.description}</p>
-                  </div>
-                ))}
-              </div>
+            <div className="dossier-row"><span>加入</span><strong>{formatTime(profileUser.createdAt).split(' ')[0]}</strong></div>
+            <div className="dossier-row"><span>最后活跃</span><strong>{profileUser.lastSeenAt ? formatTime(profileUser.lastSeenAt).split(' ')[0] : '未知'}</strong></div>
+            <div className="dossier-row"><span>等级</span><strong>Lv.{profileUser.level}</strong></div>
+            {pinnedThread && (
+              <Link className="dossier-pinned" to={`/t/${pinnedThread.id}`}>
+                <span className="muted small">置顶主题</span>
+                <strong>{pinnedThread.title}</strong>
+              </Link>
             )}
           </section>
         </aside>

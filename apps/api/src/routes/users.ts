@@ -52,6 +52,7 @@ const usersRoutes: FastifyPluginAsync = async (app) => {
         exp: users.exp,
         equippedTitleId: users.equippedTitleId,
         createdAt: users.createdAt,
+        lastSeenAt: users.lastSeenAt,
       })
       .from(users)
       .where(and(eq(users.username, username), eq(users.status, 'active')))
@@ -99,6 +100,7 @@ const usersRoutes: FastifyPluginAsync = async (app) => {
         id: threads.id,
         title: threads.title,
         replyCount: threads.replyCount,
+        isPinned: threads.isPinned,
         lastPostAt: threads.lastPostAt,
         barSlug: bars.slug,
         barName: bars.name,

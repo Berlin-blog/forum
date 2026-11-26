@@ -137,6 +137,7 @@ export function BarPage() {
                   <div className="thread-title">
                     {thread.isPinned && <span className="badge pinned">置顶</span>}
                     {thread.isFeatured && <span className="badge featured">精华</span>}
+                    {thread.authorRole === 'bot' && <span className="bot-badge">机器人</span>}
                     {thread.title}
                   </div>
                   <div className="thread-meta">

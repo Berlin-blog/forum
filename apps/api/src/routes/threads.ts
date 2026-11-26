@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { db } from '../db/client';
 import { bars, posts, threads, users } from '../db/schema';
 import { renderContent } from '../lib/content';
-import { requireUser } from '../lib/guard';
+import { optionalUser, requireUser } from '../lib/guard';
 import { resolveAttachmentMarkdown } from '../lib/attachments';
 import { awardXp } from '../lib/progression';
 
@@ -54,6 +54,7 @@ const threadsRoutes: FastifyPluginAsync = async (app) => {
         createdAt: threads.createdAt,
         authorName: users.displayName,
         authorUsername: users.username,
+        authorRole: users.userRole,
         barSlug: bars.slug,
         barName: bars.name,
       })
@@ -231,6 +232,8 @@ const threadsRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(400).send({ error: { code: 'INVALID_ID', message: '主题 ID 不合法' } });
     }
 
+    const viewer = await optionalUser(request);
+
     const [thread] = await db
       .select({
         id: threads.id,
@@ -246,6 +249,7 @@ const threadsRoutes: FastifyPluginAsync = async (app) => {
         authorId: users.id,
         authorName: users.displayName,
         authorUsername: users.username,
+        authorRole: users.userRole,
       })
       .from(threads)
       .innerJoin(bars, eq(bars.id, threads.barId))
@@ -262,8 +266,20 @@ const threadsRoutes: FastifyPluginAsync = async (app) => {
         id: posts.id,
         contentHtml: posts.contentHtml,
         contentMd: posts.contentMd,
+        contentText: posts.contentText,
         createdAt: posts.createdAt,
         editedAt: posts.editedAt,
+        likeCount: sql<number>`(
+          select count(*) from reactions r
+          where r.target_type = 'post' and r.target_id = ${posts.id} and r.kind = 'like'
+        )`,
+        liked: viewer
+          ? sql<boolean>`exists(
+              select 1 from reactions r
+              where r.target_type = 'post' and r.target_id = ${posts.id}
+                and r.kind = 'like' and r.user_id = ${viewer.id}
+            )`
+          : sql<boolean>`false`,
       })
       .from(posts)
       .where(and(eq(posts.threadId, id), eq(posts.floor, 1), eq(posts.status, 'visible')))
@@ -288,6 +304,7 @@ const threadsRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(400).send({ error: { code: 'INVALID_QUERY', message: '查询参数不合法' } });
     }
 
+    const viewer = await optionalUser(request);
     const rows = await db
       .select({
         id: posts.id,
@@ -295,16 +312,29 @@ const threadsRoutes: FastifyPluginAsync = async (app) => {
         floor: posts.floor,
         contentHtml: posts.contentHtml,
         contentMd: posts.contentMd,
+        contentText: posts.contentText,
         createdAt: posts.createdAt,
         editedAt: posts.editedAt,
         childCount: sql<number>`(
           select count(*) from posts child
           where child.parent_id = ${posts.id} and child.status = 'visible'
         )`,
+        likeCount: sql<number>`(
+          select count(*) from reactions r
+          where r.target_type = 'post' and r.target_id = ${posts.id} and r.kind = 'like'
+        )`,
+        liked: viewer
+          ? sql<boolean>`exists(
+              select 1 from reactions r
+              where r.target_type = 'post' and r.target_id = ${posts.id}
+                and r.kind = 'like' and r.user_id = ${viewer.id}
+            )`
+          : sql<boolean>`false`,
         authorId: users.id,
         authorName: users.displayName,
         authorUsername: users.username,
         avatarUrl: users.avatarUrl,
+        authorRole: users.userRole,
       })
       .from(posts)
       .innerJoin(users, eq(users.id, posts.authorId))

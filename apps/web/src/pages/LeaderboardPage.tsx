@@ -19,19 +19,32 @@ type Leader = {
 
 type View = 'all' | 'weekly';
 
+type LastSettlement = {
+  weekStart: string;
+  winners: Array<{
+    userId: number;
+    rank: number;
+    exp: number;
+    username: string | null;
+    displayName: string;
+  }>;
+};
+
 export function LeaderboardPage() {
   const [items, setItems] = useState<Leader[]>([]);
   const [view, setView] = useState<View>('all');
   const [weekStart, setWeekStart] = useState('');
+  const [lastSettlement, setLastSettlement] = useState<LastSettlement | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setLoading(true);
     const endpoint = view === 'weekly' ? '/api/leaderboard/weekly' : '/api/leaderboard?limit=50';
-    api.get<{ items: Leader[]; weekStart?: string }>(endpoint)
+    api.get<{ items: Leader[]; weekStart?: string; lastSettlement?: LastSettlement | null }>(endpoint)
       .then((data) => {
         setItems(data.items);
         setWeekStart(data.weekStart ?? '');
+        setLastSettlement(data.lastSettlement ?? null);
       })
       .finally(() => setLoading(false));
   }, [view]);
@@ -83,9 +96,34 @@ export function LeaderboardPage() {
       )}
 
       {view === 'weekly' && (
-        <p className="muted small leaderboard-note">
-          每周结算上一周经验，前三名自动获得「本周魁首 / 本周亚席 / 本周季席」，有效期 7 天。
-        </p>
+        <>
+          <p className="muted small leaderboard-note">
+            每周结算上一周经验，前三名自动获得「本周魁首 / 本周亚席 / 本周季席」，有效期 7 天。
+          </p>
+          {lastSettlement && (
+            <section className="panel last-settlement">
+              <div className="section-head">
+                <div className="section-title-wrap">
+                  <span className="section-index">结</span>
+                  <h2>上周结算 · {lastSettlement.weekStart}</h2>
+                </div>
+              </div>
+              {lastSettlement.winners.length === 0 ? (
+                <p className="muted small">上周没有产生上榜用户。</p>
+              ) : (
+                <div className="last-settlement-list">
+                  {lastSettlement.winners.map((winner) => (
+                    <Link key={winner.userId} className="last-settlement-row" to={winner.username ? `/u/${winner.username}` : '#'}>
+                      <span className="leader-medal">{winner.rank === 1 ? '魁' : winner.rank === 2 ? '亚' : '季'}</span>
+                      <strong>{winner.displayName}</strong>
+                      <span className="muted small">{winner.exp} 经验</span>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+        </>
       )}
     </div>
   );

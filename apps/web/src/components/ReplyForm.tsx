@@ -9,9 +9,10 @@ type Props = {
   onCreated: () => void | Promise<void>;
   compact?: boolean;
   placeholder?: string;
+  quote?: string;
 };
 
-export function ReplyForm({ endpoint, onCreated, compact, placeholder }: Props) {
+export function ReplyForm({ endpoint, onCreated, compact, placeholder, quote = '' }: Props) {
   const { user } = useAuth();
   const [content, setContent, clearDraft, hadDraft] = useDraft(
     `forum:draft:reply:${endpoint}`,
@@ -32,13 +33,17 @@ export function ReplyForm({ endpoint, onCreated, compact, placeholder }: Props) 
 
   async function uploadImage(file: File) {
     if (uploading) return;
+    const alt = window.prompt('图片描述（可选，方便无障碍阅读）') ?? '';
     setUploading(true);
     setError('');
     try {
       const form = new FormData();
       form.append('file', file);
       const data = await api.upload<{ markdown: string; preview: string }>('/api/uploads', form);
-      setContent((current) => `${current}${current ? '\n\n' : ''}${data.markdown}\n`);
+      const markdown = alt.trim()
+        ? data.markdown.replace('![图片]', `![${alt.trim().replace(/[\]\n]/g, ' ')}]`)
+        : data.markdown;
+      setContent((current) => `${current}${current ? '\n\n' : ''}${markdown}\n`);
       setPreviews((current) => [...current, data.preview]);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : '图片上传失败');
@@ -54,7 +59,7 @@ export function ReplyForm({ endpoint, onCreated, compact, placeholder }: Props) 
     setBusy(true);
     setError('');
     try {
-      await api.post(endpoint, { content });
+      await api.post(endpoint, { content: `${quote}${content}` });
       clearDraft();
       setPreviews([]);
       await onCreated();
@@ -67,6 +72,7 @@ export function ReplyForm({ endpoint, onCreated, compact, placeholder }: Props) 
 
   return (
     <form className={compact ? 'reply-form compact' : 'reply-form'} onSubmit={submit}>
+      {quote && <div className="quote-preview">{quote}</div>}
       <textarea
         value={content}
         onChange={(event) => setContent(event.target.value)}

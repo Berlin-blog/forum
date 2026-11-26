@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { db } from '../db/client';
 import { bars, notifications, posts, reactions, threads, users } from '../db/schema';
 import { renderContent } from '../lib/content';
-import { requireUser } from '../lib/guard';
+import { optionalUser, requireUser } from '../lib/guard';
 import { resolveAttachmentMarkdown } from '../lib/attachments';
 import { awardXp } from '../lib/progression';
 
@@ -17,24 +17,39 @@ const pageSchema = z.object({
   offset: z.coerce.number().int().min(0).default(0),
 });
 
-const postSelect = {
-  id: posts.id,
-  threadId: posts.threadId,
-  parentId: posts.parentId,
-  floor: posts.floor,
-  contentHtml: posts.contentHtml,
-  contentMd: posts.contentMd,
-  createdAt: posts.createdAt,
-  editedAt: posts.editedAt,
-  childCount: sql<number>`(
-    select count(*) from posts child
-    where child.parent_id = ${posts.id} and child.status = 'visible'
-  )`,
-  authorId: users.id,
-  authorName: users.displayName,
-  authorUsername: users.username,
-  avatarUrl: users.avatarUrl,
-};
+function postSelectFor(viewerId?: number) {
+  return {
+    id: posts.id,
+    threadId: posts.threadId,
+    parentId: posts.parentId,
+    floor: posts.floor,
+    contentHtml: posts.contentHtml,
+    contentMd: posts.contentMd,
+    contentText: posts.contentText,
+    createdAt: posts.createdAt,
+    editedAt: posts.editedAt,
+    childCount: sql<number>`(
+      select count(*) from posts child
+      where child.parent_id = ${posts.id} and child.status = 'visible'
+    )`,
+    likeCount: sql<number>`(
+      select count(*) from reactions r
+      where r.target_type = 'post' and r.target_id = ${posts.id} and r.kind = 'like'
+    )`,
+    liked: viewerId
+      ? sql<boolean>`exists(
+          select 1 from reactions r
+          where r.target_type = 'post' and r.target_id = ${posts.id}
+            and r.kind = 'like' and r.user_id = ${viewerId}
+        )`
+      : sql<boolean>`false`,
+    authorId: users.id,
+    authorName: users.displayName,
+    authorUsername: users.username,
+    avatarUrl: users.avatarUrl,
+    authorRole: users.userRole,
+  };
+}
 
 const postsRoutes: FastifyPluginAsync = async (app) => {
   app.get('/api/posts/:id/children', async (request, reply) => {
@@ -48,8 +63,9 @@ const postsRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(400).send({ error: { code: 'INVALID_QUERY', message: '查询参数不合法' } });
     }
 
+    const viewer = await optionalUser(request);
     const rows = await db
-      .select(postSelect)
+      .select(postSelectFor(viewer?.id))
       .from(posts)
       .innerJoin(users, eq(users.id, posts.authorId))
       .where(and(
@@ -152,7 +168,7 @@ const postsRoutes: FastifyPluginAsync = async (app) => {
     if (!created) return;
 
     const [post] = await db
-      .select(postSelect)
+      .select(postSelectFor(user.id))
       .from(posts)
       .innerJoin(users, eq(users.id, posts.authorId))
       .where(eq(posts.id, created.id))
@@ -247,7 +263,7 @@ const postsRoutes: FastifyPluginAsync = async (app) => {
     if (!created) return;
 
     const [post] = await db
-      .select(postSelect)
+      .select(postSelectFor(user.id))
       .from(posts)
       .innerJoin(users, eq(users.id, posts.authorId))
       .where(eq(posts.id, created.id))
@@ -288,7 +304,7 @@ const postsRoutes: FastifyPluginAsync = async (app) => {
     }).where(eq(posts.id, postId));
 
     const [updated] = await db
-      .select(postSelect)
+      .select(postSelectFor(user.id))
       .from(posts)
       .innerJoin(users, eq(users.id, posts.authorId))
       .where(eq(posts.id, postId))
@@ -374,7 +390,12 @@ const postsRoutes: FastifyPluginAsync = async (app) => {
 
     if (existing) {
       await db.delete(reactions).where(eq(reactions.id, existing.id));
-      return { liked: false };
+      const [count] = await db.select({ value: sql<number>`count(*)` }).from(reactions).where(and(
+        eq(reactions.targetType, 'post'),
+        eq(reactions.targetId, postId),
+        eq(reactions.kind, 'like'),
+      ));
+      return { liked: false, count: Number(count?.value ?? 0) };
     }
 
     await db.insert(reactions).values([{
@@ -384,7 +405,12 @@ const postsRoutes: FastifyPluginAsync = async (app) => {
       kind: 'like',
       createdAt: new Date(),
     }]);
-    return { liked: true };
+    const [count] = await db.select({ value: sql<number>`count(*)` }).from(reactions).where(and(
+      eq(reactions.targetType, 'post'),
+      eq(reactions.targetId, postId),
+      eq(reactions.kind, 'like'),
+    ));
+    return { liked: true, count: Number(count?.value ?? 0) };
   });
 };
 

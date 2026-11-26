@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { api, ApiError, fixContentHtml } from '../api';
+import { api, ApiError } from '../api';
 import { useAuth } from '../auth';
+import { ContentHtml } from '../components/ContentHtml';
 import { ReplyForm } from '../components/ReplyForm';
 import { PostNode } from '../components/PostNode';
 import { ThreadSkeleton } from '../components/Skeleton';
@@ -24,6 +25,9 @@ export function ThreadPage() {
   const [editTitle, setEditTitle] = useState('');
   const [editContent, setEditContent] = useState('');
   const [saving, setSaving] = useState(false);
+  const [firstLikeCount, setFirstLikeCount] = useState(0);
+  const [firstLiked, setFirstLiked] = useState(false);
+  const [quote, setQuote] = useState('');
 
   const load = useCallback(async () => {
     const [threadData, postData] = await Promise.all([
@@ -32,6 +36,11 @@ export function ThreadPage() {
     ]);
     setThread(threadData.thread);
     setFirstPost(threadData.firstPost);
+    if (threadData.firstPost) {
+      const fromList = postData.items.find((item) => item.id === threadData.firstPost?.id);
+      setFirstLikeCount(fromList?.likeCount ?? threadData.firstPost.likeCount ?? 0);
+      setFirstLiked(Boolean(fromList?.liked ?? threadData.firstPost.liked));
+    }
     setPosts(postData.items);
     setTotal(postData.total);
   }, [threadId]);
@@ -91,6 +100,20 @@ export function ThreadPage() {
     }
   }
 
+  async function toggleFirstLike() {
+    if (!firstPost) return;
+    const data = await api.post<{ liked: boolean; count: number }>(`/api/posts/${firstPost.id}/like`, {});
+    setFirstLiked(data.liked);
+    setFirstLikeCount(data.count);
+  }
+
+  function quoteFirstPost() {
+    if (!firstPost) return;
+    setQuote(`> @${thread?.authorUsername ?? ''} 说：${firstPost.contentText.replace(/\s+/g, ' ').slice(0, 160)}\n\n`);
+    document.getElementById('reply-box')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    window.setTimeout(() => document.querySelector<HTMLTextAreaElement>('#reply-box textarea')?.focus(), 350);
+  }
+
   if (loading) return <ThreadSkeleton />;
   if (error && !thread) return <p className="notice error">{error}</p>;
   if (!thread) return null;
@@ -116,11 +139,17 @@ export function ThreadPage() {
           <h1>{thread.title}</h1>
           <div className="thread-meta">
             <span>@{thread.authorUsername}</span>
+            {thread.authorRole === 'bot' && <span className="bot-badge">机器人</span>}
             <span>{formatTime(thread.createdAt)}</span>
             <span>{thread.viewCount} 浏览</span>
             <span>{thread.replyCount} 回复</span>
             {locked && <span className="badge locked">已锁定</span>}
           </div>
+          {thread.authorRole === 'bot' && (
+            <div className="bot-source-bar">
+              <span>热点播报</span> 自动整理自百度热搜 · 每 2 小时最多 1 条
+            </div>
+          )}
         </div>
         <div className="thread-actions">
           {canEdit && !editing && (
@@ -139,6 +168,7 @@ export function ThreadPage() {
           <div className="post-head">
             <span className="post-author">{thread.authorName}</span>
             <span className="muted small">楼主</span>
+            {thread.authorRole === 'bot' && <span className="bot-badge">机器人</span>}
             {firstPost.editedAt && <span className="muted small">已编辑</span>}
           </div>
 
@@ -158,7 +188,16 @@ export function ThreadPage() {
               </div>
             </form>
           ) : (
-            <div className="post-content" dangerouslySetInnerHTML={{ __html: fixContentHtml(firstPost.contentHtml) }} />
+            <ContentHtml html={firstPost.contentHtml} />
+          )}
+
+          {!editing && (
+            <div className="post-actions first-post-actions">
+              <button className={`link-btn ${firstLiked ? 'liked' : ''}`} onClick={() => void toggleFirstLike()}>
+                {firstLiked ? '已赞' : '赞'} {firstLikeCount > 0 ? firstLikeCount : ''}
+              </button>
+              <button className="link-btn" onClick={quoteFirstPost}>引用</button>
+            </div>
           )}
         </article>
       )}
@@ -180,7 +219,7 @@ export function ThreadPage() {
         )}
       </section>
 
-      <section className="reply-box" data-reveal>
+      <section className="reply-box" id="reply-box" data-reveal>
         <div className="section-head">
           <div className="section-title-wrap">
             <span className="section-index">复</span>
@@ -193,11 +232,24 @@ export function ThreadPage() {
         ) : (
           <ReplyForm
             endpoint={`/api/threads/${thread.id}/posts`}
-            onCreated={load}
+            onCreated={async () => { setQuote(''); await load(); }}
+            quote={quote}
             placeholder="回复这个主题，支持 Markdown"
           />
         )}
       </section>
+
+      {!locked && (
+        <button
+          className="mobile-reply-fab"
+          onClick={() => {
+            document.getElementById('reply-box')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            window.setTimeout(() => document.querySelector<HTMLTextAreaElement>('#reply-box textarea')?.focus(), 350);
+          }}
+        >
+          回复
+        </button>
+      )}
     </div>
   );
 }

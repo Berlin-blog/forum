@@ -53,13 +53,17 @@ export function NewThreadPage() {
 
   async function uploadImage(file: File) {
     if (uploading) return;
+    const alt = window.prompt('图片描述（可选，方便无障碍阅读）') ?? '';
     setUploading(true);
     setError('');
     try {
       const form = new FormData();
       form.append('file', file);
       const data = await api.upload<{ markdown: string; preview: string }>('/api/uploads', form);
-      setContent((current) => `${current}${current ? '\n\n' : ''}${data.markdown}\n`);
+      const markdown = alt.trim()
+        ? data.markdown.replace('![图片]', `![${alt.trim().replace(/[\]\n]/g, ' ')}]`)
+        : data.markdown;
+      setContent((current) => `${current}${current ? '\n\n' : ''}${markdown}\n`);
       setPreviews((current) => [...current, data.preview]);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : '图片上传失败');

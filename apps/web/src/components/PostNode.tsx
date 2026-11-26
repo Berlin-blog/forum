@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { api, ApiError, fixContentHtml } from '../api';
+import { api, ApiError } from '../api';
 import { useAuth } from '../auth';
 import { usePreferences } from '../preferences';
 import { formatTime } from '../format';
 import type { Post } from '../types';
+import { ContentHtml } from './ContentHtml';
 import { ReplyForm } from './ReplyForm';
 
 type Props = {
@@ -21,6 +22,10 @@ export function PostNode({ post, depth, onChanged }: Props) {
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [showReply, setShowReply] = useState(false);
+  const [quote, setQuote] = useState('');
+  const [likeCount, setLikeCount] = useState(post.likeCount ?? 0);
+  const [liked, setLiked] = useState(Boolean(post.liked));
+  const [liking, setLiking] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editContent, setEditContent] = useState(post.contentMd);
   const [localHtml, setLocalHtml] = useState(post.contentHtml);
@@ -77,7 +82,25 @@ export function PostNode({ post, depth, onChanged }: Props) {
     setChildren(null);
     await loadChildren();
     setShowReply(false);
+    setQuote('');
     await onChanged?.();
+  }
+
+  async function toggleLike() {
+    if (liking) return;
+    setLiking(true);
+    try {
+      const data = await api.post<{ liked: boolean; count: number }>(`/api/posts/${post.id}/like`, {});
+      setLiked(data.liked);
+      setLikeCount(data.count);
+    } finally {
+      setLiking(false);
+    }
+  }
+
+  function startQuote() {
+    setQuote(`> @${post.authorUsername} 说：${post.contentText.replace(/\s+/g, ' ').slice(0, 160)}\n\n`);
+    setShowReply(true);
   }
 
   async function saveEdit() {
@@ -117,6 +140,7 @@ export function PostNode({ post, depth, onChanged }: Props) {
         <span className="post-author">{post.authorName}</span>
         <span className="muted small">@{post.authorUsername}</span>
         {post.floor ? <span className="floor">#{post.floor}</span> : <span className="floor nested">楼中楼</span>}
+        {post.authorRole === 'bot' && <span className="bot-badge">机器人</span>}
         <time className="muted small">{formatTime(post.createdAt)}</time>
         {post.editedAt && <span className="muted small">已编辑</span>}
       </div>
@@ -133,7 +157,7 @@ export function PostNode({ post, depth, onChanged }: Props) {
           </div>
         </div>
       ) : (
-        <div className="post-content" dangerouslySetInnerHTML={{ __html: fixContentHtml(localHtml) }} />
+        <ContentHtml html={localHtml} />
       )}
 
       <div className="post-actions">
@@ -142,6 +166,10 @@ export function PostNode({ post, depth, onChanged }: Props) {
             {loading ? '加载中…' : open ? `收起 ${count} 条回复` : `展开 ${count} 条回复`}
           </button>
         )}
+        <button className={`link-btn ${liked ? 'liked' : ''}`} onClick={() => void toggleLike()} disabled={liking}>
+          {liked ? '已赞' : '赞'} {likeCount > 0 ? likeCount : ''}
+        </button>
+        <button className="link-btn" onClick={startQuote}>引用</button>
         <button className="link-btn" onClick={() => setShowReply((value) => !value)}>
           {showReply ? '取消回复' : '回复'}
         </button>
@@ -160,6 +188,7 @@ export function PostNode({ post, depth, onChanged }: Props) {
           endpoint={`/api/posts/${post.id}/replies`}
           onCreated={handleCreated}
           compact
+          quote={quote}
           placeholder={`回复 ${post.authorName}`}
         />
       )}

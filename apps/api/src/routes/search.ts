@@ -9,6 +9,8 @@ const searchRoutes: FastifyPluginAsync = async (app) => {
     const parsed = z.object({
       q: z.string().trim().min(1).max(64),
       type: z.enum(['all', 'bar', 'thread', 'user']).default('all'),
+      bar: z.string().trim().max(64).optional(),
+      author: z.string().trim().max(32).optional(),
       limit: z.coerce.number().int().min(1).max(20).default(10),
       offset: z.coerce.number().int().min(0).default(0),
     }).safeParse(request.query);
@@ -18,7 +20,7 @@ const searchRoutes: FastifyPluginAsync = async (app) => {
 
     const q = parsed.data.q.replace(/[%_\\]/g, '\\$&');
     const pattern = `%${q}%`;
-    const { type, limit, offset } = parsed.data;
+    const { type, limit, offset, bar, author } = parsed.data;
     const wantBars = type === 'all' || type === 'bar';
     const wantUsers = type === 'all' || type === 'user';
     const wantThreads = type === 'all' || type === 'thread';
@@ -30,6 +32,8 @@ const searchRoutes: FastifyPluginAsync = async (app) => {
     );
     const threadWhere = and(
       eq(threads.status, 'open'),
+      bar ? eq(bars.slug, bar) : undefined,
+      author ? eq(users.username, author) : undefined,
       or(
         like(threads.title, pattern),
         sql`exists (
@@ -96,7 +100,10 @@ const searchRoutes: FastifyPluginAsync = async (app) => {
         ? db.select({ value: sql<number>`count(*)` }).from(users).where(userWhere)
         : Promise.resolve([{ value: 0 }]),
       wantThreads
-        ? db.select({ value: sql<number>`count(*)` }).from(threads).where(threadWhere)
+        ? db.select({ value: sql<number>`count(*)` }).from(threads)
+          .innerJoin(bars, eq(bars.id, threads.barId))
+          .innerJoin(users, eq(users.id, threads.authorId))
+          .where(threadWhere)
         : Promise.resolve([{ value: 0 }]),
     ]);
 
