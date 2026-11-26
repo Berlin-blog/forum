@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { LevelBadge } from '../components/Growth';
+import { ListSkeleton } from '../components/Skeleton';
 
 type Leader = {
   rank: number;
@@ -54,7 +55,7 @@ export function LeaderboardPage() {
         <button className={view === 'weekly' ? 'active' : ''} onClick={() => setView('weekly')}>本周榜</button>
       </div>
 
-      {loading ? <p className="muted">加载中…</p> : (
+      {loading ? <ListSkeleton rows={5} /> : (
         <div className="leaderboard-list" data-reveal>
           {items.length === 0 && <p className="muted">这一周还没有人上榜，去发帖或回复吧。</p>}
           {items.map((item) => (

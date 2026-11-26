@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../auth';
+import { ListSkeleton, SkeletonBlock } from '../components/Skeleton';
 import { formatTime } from '../format';
 import type { Bar, ThreadSummary } from '../types';
 
@@ -54,7 +55,15 @@ export function BarPage() {
     setBar((current) => current ? { ...current, memberCount: data.memberCount } : current);
   }
 
-  if (loading) return <p className="muted">加载中…</p>;
+  if (loading) {
+    return (
+      <div aria-busy="true" aria-label="加载中">
+        <SkeletonBlock className="skeleton-thread-head" />
+        <SkeletonBlock className="skeleton-section-title" />
+        <ListSkeleton rows={5} />
+      </div>
+    );
+  }
   if (error) return <p className="notice error">{error}</p>;
   if (!bar) return null;
 

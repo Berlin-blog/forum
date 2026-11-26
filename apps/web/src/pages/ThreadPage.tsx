@@ -4,6 +4,7 @@ import { api, ApiError, fixContentHtml } from '../api';
 import { useAuth } from '../auth';
 import { ReplyForm } from '../components/ReplyForm';
 import { PostNode } from '../components/PostNode';
+import { ThreadSkeleton } from '../components/Skeleton';
 import { formatTime } from '../format';
 import type { FirstPost, Post, ThreadDetail } from '../types';
 
@@ -90,7 +91,7 @@ export function ThreadPage() {
     }
   }
 
-  if (loading) return <p className="muted">加载中…</p>;
+  if (loading) return <ThreadSkeleton />;
   if (error && !thread) return <p className="notice error">{error}</p>;
   if (!thread) return null;
 

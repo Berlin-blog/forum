@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../auth';
 import { CheckInButton, LevelBadge, XpBar } from '../components/Growth';
+import { HomeSkeleton } from '../components/Skeleton';
 import { formatTime } from '../format';
 import type { Category, Progress, ThreadSummary } from '../types';
 
@@ -61,12 +62,7 @@ export function HomePage() {
   }, [user]);
 
   if (loading) {
-    return (
-      <div className="home-loading">
-        <span className="loading-mark">雅</span>
-        <p className="muted">正在铺开今日的席面…</p>
-      </div>
-    );
+    return <HomeSkeleton />;
   }
 
   if (error || !data) {

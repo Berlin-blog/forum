@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../api';
+import { ListSkeleton } from '../components/Skeleton';
 import { formatTime } from '../format';
 import type { Bar } from '../types';
 
@@ -50,8 +51,12 @@ export function SearchPage() {
 
   async function search(q: string, nextType: SearchType, offset = 0) {
     if (!q.trim()) return;
-    if (offset === 0) setLoading(true);
-    else setLoadingMore(true);
+    if (offset === 0) {
+      setLoading(true);
+      setResult(null);
+    } else {
+      setLoadingMore(true);
+    }
     setError('');
     try {
       const data = await api.get<SearchResult>(
@@ -135,6 +140,7 @@ export function SearchPage() {
       </div>
 
       {error && <p className="notice error">{error}</p>}
+      {loading && <ListSkeleton rows={4} />}
       {result && <p className="muted small">找到 {total} 条结果</p>}
 
       {result && result.threads.length > 0 && (

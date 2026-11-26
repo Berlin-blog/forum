@@ -5,6 +5,19 @@ import { LevelBadge, NotificationBell } from './Growth';
 
 const siteName = window.__FORUM_CONFIG__?.siteName ?? '论坛';
 
+function MobileNav() {
+  const { user } = useAuth();
+  return (
+    <nav className="mobile-nav" aria-label="移动端导航">
+      <NavLink to="/" end><span>首</span><small>首页</small></NavLink>
+      <NavLink to="/bars"><span>吧</span><small>吧广场</small></NavLink>
+      <NavLink to="/search"><span>寻</span><small>搜索</small></NavLink>
+      <NavLink to={user ? `/u/${user.username}` : '/login'}><span>我</span><small>我的</small></NavLink>
+      <NavLink to="/settings"><span>设</span><small>设置</small></NavLink>
+    </nav>
+  );
+}
+
 export function Layout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -62,6 +75,8 @@ export function Layout() {
       <main className="container main">
         <Outlet />
       </main>
+
+      <MobileNav />
 
       <footer className="footer">
         <div className="container footer-inner">
